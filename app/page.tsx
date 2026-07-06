@@ -1,65 +1,58 @@
-import Image from "next/image";
+import React from 'react';
+import { getSession } from './actions';
+import IDCardForm from './id-card-form';
+import IDCardPreview from './id-card-preview';
+import { ShieldAlert, CreditCard } from 'lucide-react';
 
-export default function Home() {
+export const metadata = {
+  title: 'YKBS Labs ID Card Generator - Session Persisted',
+  description: 'Generate and print high-quality professional ID cards securely. Your details are saved in the session.',
+};
+
+export default async function Home() {
+  const session = await getSession();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen w-full flex flex-col justify-between bg-slate-50 text-slate-900 relative bg-grid-pattern py-12 px-4 md:px-8">
+      
+      {/* Background radial glows (Soft Light Mode Pastels) */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-200/20 rounded-full filter blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-200/20 rounded-full filter blur-[100px] pointer-events-none" />
+
+      {/* Main Header / Branding */}
+      <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center mb-8 z-10 text-center">
+        <div className="flex items-center gap-2 px-3.5 py-1 bg-white border border-slate-200/80 rounded-full mb-4 shadow-sm">
+          <CreditCard className="w-3.5 h-3.5 text-indigo-500" />
+          <span className="text-[10px] font-mono tracking-[3px] uppercase text-slate-600 font-semibold">Secure Issuing System</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 bg-clip-text text-transparent">
+          YKBS SECURE CARD
+        </h1>
+        <p className="text-xs md:text-sm text-slate-500 font-mono mt-2 uppercase tracking-[2px] font-semibold">
+          PT YKBS Labs Indonesia &bull; Card Generation Portal
+        </p>
+      </div>
+
+      {/* Body Content Area */}
+      <div className="w-full flex-grow flex items-center justify-center z-10">
+        {!session ? (
+          <IDCardForm />
+        ) : (
+          <IDCardPreview data={session} />
+        )}
+      </div>
+
+      {/* Footer Branding & Disclaimer */}
+      <div className="w-full max-w-5xl mx-auto mt-12 z-10 border-t border-slate-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <div className="text-[10px] text-slate-500 font-mono max-w-md leading-relaxed">
+          Sistem Generator ID Card ini berjalan secara penuh di sisi client dan server-memory. Data di dalam cookie session terenkripsi ringan secara lokal.
         </div>
-      </main>
-    </div>
+        <div className="flex items-center gap-2 text-[10px] text-slate-600 font-mono bg-white px-3 py-1.5 border border-slate-200 rounded-lg shadow-sm">
+          <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+          <span>Internal Use Only &bull; ISSUER: YKBS SECURITY DEPT</span>
+        </div>
+      </div>
+
+    </main>
   );
 }
