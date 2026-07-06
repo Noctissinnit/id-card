@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import html2canvas from 'html2canvas-pro';
 import { 
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
+import { getPhoto, deletePhoto } from './db';
 
 // Dynamic SVG Barcode Generator
 const Barcode = ({ value }: { value: string }) => {
@@ -255,8 +256,22 @@ interface IDCardPreviewProps {
 export default function IDCardPreview({ data }: IDCardPreviewProps) {
   const router = useRouter();
   const [isFlipped, setIsFlipped] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (data.photoUrl === 'indexeddb') {
+      getPhoto('id_card_photo').then((base64) => {
+        if (base64) {
+          setPhotoUrl(base64);
+        }
+      });
+    } else {
+      setPhotoUrl(data.photoUrl);
+    }
+  }, [data.photoUrl]);
   
   const handleReset = async () => {
+    await deletePhoto('id_card_photo');
     await clearSessionAction();
     router.refresh();
   };
@@ -383,9 +398,9 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
               zIndex: 10
             }}
           >
-            {data.photoUrl ? (
+            {photoUrl ? (
               <img 
-                src={data.photoUrl} 
+                src={photoUrl} 
                 alt="Profile Photo" 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -509,9 +524,9 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
               overflow: 'hidden'
             }}
           >
-            {data.photoUrl ? (
+            {photoUrl ? (
               <img 
-                src={data.photoUrl} 
+                src={photoUrl} 
                 alt="Profile Photo" 
                 className="w-full h-full object-cover"
                 style={{ width: '128px', height: '128px', objectFit: 'cover' }}

@@ -15,6 +15,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { saveSessionAction } from './actions';
+import { savePhoto } from './db';
 
 const THEME_OPTIONS = [
   {
@@ -119,6 +120,15 @@ export default function IDCardForm() {
     }
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -132,13 +142,17 @@ export default function IDCardForm() {
     setLoading(true);
 
     try {
+      // Save photo to IndexedDB on the client side
+      const base64Photo = await fileToBase64(photo);
+      await savePhoto('id_card_photo', base64Photo);
+
       const formData = new FormData();
       formData.append('nama', nama);
       formData.append('nik', nik);
       formData.append('jabatan', jabatan);
       formData.append('departemen', departemen);
       formData.append('theme', theme);
-      formData.append('photo', photo);
+      formData.append('hasPhoto', 'true');
 
       const result = await saveSessionAction(formData);
       

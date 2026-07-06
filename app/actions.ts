@@ -1,8 +1,6 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 
 export interface IDCardSession {
@@ -35,30 +33,17 @@ export async function saveSessionAction(formData: FormData) {
   const jabatan = formData.get('jabatan') as string;
   const departemen = formData.get('departemen') as string;
   const theme = formData.get('theme') as string;
-  const photo = formData.get('photo') as File | null;
+  const hasPhoto = formData.get('hasPhoto') as string; // 'true' or 'false'
 
   // Retrieve or create sessionId
   const existingSession = await getSession();
   const sessionId = existingSession?.sessionId || crypto.randomUUID();
   let photoUrl = existingSession?.photoUrl || '';
 
-  // Handle file upload
-  if (photo && photo.size > 0) {
-    const arrayBuffer = await photo.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Determine extension or fallback to png
-    const ext = path.extname(photo.name) || '.png';
-    const filename = `${sessionId}${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    
-    // Ensure upload directory exists
-    await fs.promises.mkdir(uploadDir, { recursive: true });
-
-    // Write file to public/uploads/
-    const filePath = path.join(uploadDir, filename);
-    await fs.promises.writeFile(filePath, buffer);
-    photoUrl = `/uploads/${filename}`;
+  if (hasPhoto === 'true') {
+    photoUrl = 'indexeddb';
+  } else if (hasPhoto === 'false') {
+    photoUrl = '';
   }
 
   // Create session object
@@ -85,22 +70,7 @@ export async function saveSessionAction(formData: FormData) {
 }
 
 export async function clearSessionAction() {
-  const existingSession = await getSession();
-  if (existingSession && existingSession.photoUrl) {
-    // Optionally delete the photo from filesystem
-    const relativePath = existingSession.photoUrl.replace(/^\//, ''); // remove leading slash
-    const filePath = path.join(process.cwd(), 'public', relativePath);
-    try {
-      if (fs.existsSync(filePath)) {
-        await fs.promises.unlink(filePath);
-      }
-    } catch (error) {
-      console.error('Failed to delete session photo:', error);
-    }
-  }
-
   const cookieStore = await cookies();
   cookieStore.delete('id_card_session');
-
   return { success: true };
 }
