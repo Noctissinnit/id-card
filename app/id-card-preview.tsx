@@ -402,7 +402,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#e4e4e7',
+              backgroundColor: photoUrl ? 'transparent' : '#e4e4e7',
               boxSizing: 'border-box',
               zIndex: 10
             }}
@@ -425,7 +425,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
           <div 
             style={{
               position: 'absolute',
-              top: '69.5%',
+              top: '70.8%',
               left: '12%',
               width: '76%',
               boxSizing: 'border-box',
@@ -433,7 +433,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              justifyContent: 'center',
+              justifyContent: 'flex-start',
               height: '16%',
               zIndex: 10
             }}
@@ -442,7 +442,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
             <h2 
               style={{
                 color: 'white',
-                fontFamily: 'system-ui, sans-serif',
+                fontFamily: 'var(--font-poppins), system-ui, sans-serif',
                 fontWeight: '800',
                 fontSize: data.nama.length > 20 ? '14px' : data.nama.length > 15 ? '16px' : '18px',
                 textTransform: 'uppercase',
@@ -465,10 +465,10 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
             <p 
               style={{
                 color: '#facc15',
-                fontFamily: 'system-ui, sans-serif',
+                fontFamily: 'var(--font-lato), system-ui, sans-serif',
                 fontWeight: '700',
                 fontSize: '13px',
-                marginTop: '6px',
+                marginTop: '2px',
                 marginBottom: '0',
                 letterSpacing: '0.5px',
                 textAlign: 'left'
@@ -523,7 +523,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
         <div className="relative w-36 h-36 flex items-center justify-center" style={{ width: '144px', height: '144px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {/* Photo background container */}
           <div 
-            className={`w-32 h-32 overflow-hidden relative bg-zinc-800 ${activeTheme.photoBorder} flex items-center justify-center`}
+            className={`w-32 h-32 overflow-hidden relative ${photoUrl ? 'bg-transparent' : 'bg-zinc-800'} ${activeTheme.photoBorder} flex items-center justify-center`}
             style={{ 
               width: '128px', 
               height: '128px', 
@@ -567,10 +567,10 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
 
       {/* Member Details */}
       <div className="text-center flex flex-col justify-center items-center z-10 flex-grow" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '12px', flexGrow: 1 }}>
-        <h2 className={`text-xl tracking-wide uppercase line-clamp-1 w-full max-w-[260px] ${activeTheme.textPrimary}`} style={{ fontSize: '20px', lineHeight: '28px' }}>
+        <h2 className={`text-xl tracking-wide uppercase line-clamp-1 w-full max-w-[260px] ${activeTheme.textPrimary}`} style={{ fontSize: '20px', lineHeight: '28px', fontFamily: 'var(--font-poppins), sans-serif' }}>
           {data.nama || 'JOHN DOE'}
         </h2>
-        <p className={`text-[10px] mt-1 font-mono tracking-widest text-zinc-400 font-medium`} style={{ fontSize: '10px', marginTop: '4px' }}>
+        <p className={`text-[10px] font-mono tracking-widest text-zinc-400 font-medium`} style={{ fontSize: '10px', marginTop: '2px', fontFamily: 'var(--font-lato), sans-serif' }}>
           NIK: {data.nik || '820491849182903'}
         </p>
 

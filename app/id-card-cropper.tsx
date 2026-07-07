@@ -57,14 +57,46 @@ async function getCroppedImg(
     pixelCrop.height
   );
 
-  // Export canvas content as a high-quality base64 JPEG string
-  return canvas.toDataURL('image/jpeg', 0.95);
+  // Export canvas content as base64 PNG string to support transparency
+  return canvas.toDataURL('image/png');
 }
+
+// Utility function to apply a solid background color behind a transparent image
+const applyBackgroundColor = (base64Image: string, color: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    if (color === 'transparent') {
+      resolve(base64Image);
+      return;
+    }
+    const img = new Image();
+    img.addEventListener('load', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(base64Image);
+        return;
+      }
+
+      // Fill canvas background with solid color
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw the transparent image on top
+      ctx.drawImage(img, 0, 0);
+
+      resolve(canvas.toDataURL('image/png'));
+    });
+    img.addEventListener('error', (error) => reject(error));
+    img.src = base64Image;
+  });
 
 export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: IDCardCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [bgColor, setBgColor] = useState<string>('transparent');
   const [loading, setLoading] = useState(false);
 
   const onCropChange = (newCrop: { x: number; y: number }) => {
@@ -83,7 +115,13 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
     if (!croppedAreaPixels) return;
     setLoading(true);
     try {
-      const croppedBase64 = await getCroppedImg(imageSrc, croppedAreaPixels);
+      let croppedBase64 = await getCroppedImg(imageSrc, croppedAreaPixels);
+      
+      // Apply background color if selected
+      if (bgColor !== 'transparent') {
+        croppedBase64 = await applyBackgroundColor(croppedBase64, bgColor);
+      }
+      
       onCropComplete(croppedBase64);
     } catch (e) {
       console.error('Failed to crop image:', e);
@@ -128,6 +166,11 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             classes={{
               containerClassName: 'rounded-2xl',
             }}
+            style={{
+              containerStyle: {
+                backgroundColor: bgColor === 'transparent' ? '#09090b' : bgColor
+              }
+            }}
           />
         </div>
 
@@ -157,6 +200,66 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
           >
             <ZoomIn className="w-4 h-4" />
           </button>
+        </div>
+
+
+
+        {/* BG Color Option */}
+        <div className="w-full flex flex-col gap-2 pb-5 px-2 items-start">
+          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+            Warna Latar Foto Baru (Opsional)
+          </span>
+          <div className="flex items-center gap-3 mt-1 w-full flex-wrap">
+            {/* Transparent option */}
+            <button
+              type="button"
+              onClick={() => setBgColor('transparent')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                bgColor === 'transparent'
+                  ? 'bg-indigo-50 border-indigo-500 text-indigo-600 shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Transparan
+            </button>
+            {/* Red option */}
+            <button
+              type="button"
+              onClick={() => setBgColor('#df1919')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                bgColor === '#df1919'
+                  ? 'bg-red-50 border-red-500 text-red-600 shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full bg-[#df1919] border border-black/10 inline-block" />
+              Merah
+            </button>
+            {/* Blue option */}
+            <button
+              type="button"
+              onClick={() => setBgColor('#2b539f')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                bgColor === '#2b539f'
+                  ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="w-3 h-3 rounded-full bg-[#2b539f] border border-black/10 inline-block" />
+              Biru
+            </button>
+
+            {/* Custom Color Picker option */}
+            <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50 transition cursor-pointer relative">
+              <input
+                type="color"
+                value={bgColor !== 'transparent' && bgColor !== '#df1919' && bgColor !== '#2b539f' ? bgColor : '#cccccc'}
+                onChange={(e) => setBgColor(e.target.value)}
+                className="w-4 h-4 border-none p-0 cursor-pointer bg-transparent rounded"
+              />
+              <span className="text-xs font-semibold text-slate-600">Kustom</span>
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}
