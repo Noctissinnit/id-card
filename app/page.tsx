@@ -23,13 +23,13 @@ export default async function Home() {
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center mb-8 z-10 text-center">
         <div className="flex items-center gap-2 px-3.5 py-1 bg-white border border-slate-200/80 rounded-full mb-4 shadow-sm">
           <CreditCard className="w-3.5 h-3.5 text-indigo-500" />
-          <span className="text-[10px] font-mono tracking-[3px] uppercase text-slate-600 font-semibold">Secure Issuing System</span>
+          <span className="text-[10px] font-mono tracking-[3px] uppercase text-slate-600 font-semibold">ID Card Generator</span>
         </div>
         <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 bg-clip-text text-transparent">
           YKBS SECURE CARD
         </h1>
         <p className="text-xs md:text-sm text-slate-500 font-mono mt-2 uppercase tracking-[2px] font-semibold">
-          PT YKBS Labs Indonesia &bull; Card Generation Portal
+          Yayasan Karya Bakti Surakarta &bull; Card Generation Portal
         </p>
       </div>
 

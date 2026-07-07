@@ -60,3 +60,28 @@ body {
 .animate-pulse-glow {
   animation: pulse-glow 8s infinite alternate;
 }
+
+/* Print Styles: Hide UI controls and format ID card cleanly for printers/PDFs */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #print-area, #print-area * {
+    visibility: visible;
+    opacity: 1 !important;
+  }
+  
+  #print-area {
+    position: absolute;
+    left: 50% !important;
+    top: 50px !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    gap: 30px !important;
+  }
+}
+

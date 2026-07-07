@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { saveSessionAction } from './actions';
 import { savePhoto } from './db';
+import IDCardCropper from './id-card-cropper';
 
 const THEME_OPTIONS = [
   {
@@ -75,6 +76,8 @@ export default function IDCardForm() {
   const [theme, setTheme] = useState('karya-bakti');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -94,7 +97,13 @@ export default function IDCardForm() {
 
       setError(null);
       setPhoto(file);
-      setPhotoPreview(URL.createObjectURL(file));
+      
+      // Read file as base64 to open cropper modal
+      const reader = new FileReader();
+      reader.onload = () => {
+        setRawImageSrc(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -116,17 +125,14 @@ export default function IDCardForm() {
       }
       setError(null);
       setPhoto(file);
-      setPhotoPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+      
+      // Read file as base64 to open cropper modal
       const reader = new FileReader();
+      reader.onload = () => {
+        setRawImageSrc(reader.result as string);
+      };
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,15 +142,14 @@ export default function IDCardForm() {
     // Validation
     if (!nama.trim()) return setError('Nama tidak boleh kosong.');
     if (!nik.trim()) return setError('NIK tidak boleh kosong.');
-    if (nik.length < 5) return setError('NIK minimal berisi 5 digit angka.');
-    if (!photo) return setError('Silakan unggah pas foto Anda.');
+    if (nik.length < 5) return setError('NIK minimal berisi 5 karakter.');
+    if (!photoBase64) return setError('Silakan unggah pas foto Anda.');
 
     setLoading(true);
 
     try {
       // Save photo to IndexedDB on the client side
-      const base64Photo = await fileToBase64(photo);
-      await savePhoto('id_card_photo', base64Photo);
+      await savePhoto('id_card_photo', photoBase64);
 
       const formData = new FormData();
       formData.append('nama', nama);
@@ -227,7 +232,7 @@ export default function IDCardForm() {
 
             <div className="space-y-2">
               <label htmlFor="nik" className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
-                Nomor Induk Kependudukan (NIK) <span className="text-red-500">*</span>
+                Nomor Induk Karyawan (NIK) <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -238,17 +243,17 @@ export default function IDCardForm() {
                   id="nik"
                   value={nik}
                   onChange={(e) => {
-                    // Only allow numbers
-                    const val = e.target.value.replace(/\D/g, '');
+                    // Allow numbers and slashes (/)
+                    const val = e.target.value.replace(/[^0-9/]/g, '');
                     setNik(val);
                   }}
-                  maxLength={16}
-                  placeholder="Contoh: 3171012345678901"
+                  maxLength={20}
+                  placeholder="Contoh: 123/23/20"
                   className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-sm text-slate-900 placeholder-slate-400 transition outline-none font-mono shadow-inner"
                   required
                 />
               </div>
-              <p className="text-[10px] text-slate-500 font-mono">Input hanya berupa angka (maks. 16 digit)</p>
+              <p className="text-[10px] text-slate-500 font-mono">Input berupa angka dan garis miring (/) (Maks. 20 karakter)</p>
             </div>
 
             <div className="space-y-2">
@@ -409,6 +414,25 @@ export default function IDCardForm() {
         </button>
 
       </form>
+
+      {/* Photo Crop Modal */}
+      {rawImageSrc && (
+        <IDCardCropper
+          imageSrc={rawImageSrc}
+          onCropComplete={(croppedBase64) => {
+            setPhotoBase64(croppedBase64);
+            setPhotoPreview(croppedBase64);
+            setRawImageSrc(null);
+          }}
+          onCancel={() => {
+            setRawImageSrc(null);
+            if (!photoBase64) {
+              setPhoto(null);
+              setPhotoPreview(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

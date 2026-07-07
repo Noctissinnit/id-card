@@ -17,7 +17,8 @@ import {
   Calendar,
   Layers,
   ArrowRightLeft,
-  User
+  User,
+  Printer
 } from 'lucide-react';
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
@@ -276,6 +277,14 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
     router.refresh();
   };
   const [downloading, setDownloading] = useState(false);
+  const [printTarget, setPrintTarget] = useState<'front' | 'back' | 'both'>('both');
+
+  const triggerPrint = (target: 'front' | 'back' | 'both') => {
+    setPrintTarget(target);
+    setTimeout(() => {
+      window.print();
+    }, 50);
+  };
   const cardRef = useRef<HTMLDivElement>(null);
   
   // For html2canvas, we render non-rotated, flat versions offscreen
@@ -354,7 +363,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
     if (data.theme === 'karya-bakti') {
       return (
         <div 
-          className="w-[320px] h-[500px] relative overflow-hidden shrink-0 select-none"
+          className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none"
           style={{
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
             borderRadius: '16px',
@@ -474,7 +483,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
 
     return (
       <div 
-        className={`w-[320px] h-[500px] ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
+        className={`w-[320px] h-[500px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
         style={{
           boxShadow: isExport ? 'none' : undefined,
           padding: '24px',
@@ -594,7 +603,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
     if (data.theme === 'karya-bakti') {
       return (
         <div 
-          className="w-[320px] h-[500px] relative overflow-hidden shrink-0 select-none"
+          className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none"
           style={{
             background: 'radial-gradient(circle at 50% 50%, #0d47a1, #08316f)',
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
@@ -702,7 +711,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
 
     return (
       <div 
-        className={`w-[320px] h-[500px] ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
+        className={`w-[320px] h-[500px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
         style={{
           boxShadow: isExport ? 'none' : undefined,
           padding: '24px',
@@ -879,6 +888,38 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
               </span>
               <span className="text-[10px] font-mono opacity-85">PNG</span>
             </button>
+
+            <div className="space-y-2 pt-2 border-t border-slate-200">
+              <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block">
+                Opsi Cetak (PDF / Kertas)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button 
+                  onClick={() => triggerPrint('front')}
+                  disabled={downloading}
+                  className="flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-sm transition disabled:opacity-50"
+                >
+                  <Printer className="w-4 h-4 text-cyan-600" />
+                  Sisi Depan
+                </button>
+                <button 
+                  onClick={() => triggerPrint('back')}
+                  disabled={downloading}
+                  className="flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-sm transition disabled:opacity-50"
+                >
+                  <Printer className="w-4 h-4 text-purple-600" />
+                  Sisi Belakang
+                </button>
+                <button 
+                  onClick={() => triggerPrint('both')}
+                  disabled={downloading}
+                  className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-md shadow-emerald-500/10 transition disabled:opacity-50"
+                >
+                  <Printer className="w-4 h-4 text-white" />
+                  Kedua Sisi
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="h-[1px] bg-slate-200" />
@@ -952,13 +993,20 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
       {/* HIDDEN OFFSCREEN WRAPPER FOR PERFECT HTML2CANVAS EXPORTS */}
       {/* This renders flat cards without any 3D translations, preventing export warping/bugs */}
       <div 
+        id="print-area"
         className="absolute top-0 left-0 flex gap-8 pointer-events-none"
         style={{ opacity: 0, zIndex: -50 }}
       >
-        <div ref={exportFrontRef}>
+        <div 
+          ref={exportFrontRef}
+          style={{ display: (printTarget === 'front' || printTarget === 'both') ? 'block' : 'none' }}
+        >
           <CardFront isExport={true} />
         </div>
-        <div ref={exportBackRef}>
+        <div 
+          ref={exportBackRef}
+          style={{ display: (printTarget === 'back' || printTarget === 'both') ? 'block' : 'none' }}
+        >
           <CardBack isExport={true} />
         </div>
       </div>
