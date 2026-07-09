@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
-import { ZoomIn, ZoomOut, Scissors, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Scissors, X, Sparkles } from 'lucide-react';
+import { removeBackground } from '@imgly/background-removal';
 
 interface Area {
   x: number;
@@ -61,62 +62,6 @@ async function getCroppedImg(
   return canvas.toDataURL('image/png');
 }
 
-// Utility function to remove background from a base64 image (automatically samples corner color)
-const removeBackgroundAuto = (base64Image: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.addEventListener('load', () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        resolve(base64Image);
-        return;
-      }
-      ctx.drawImage(img, 0, 0);
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
-
-      // Sample background color slightly offset from top-left (e.g., x=10, y=10) to avoid borders
-      const sampleX = Math.min(10, canvas.width - 1);
-      const sampleY = Math.min(10, canvas.height - 1);
-      const sampleIndex = (sampleY * canvas.width + sampleX) * 4;
-      const targetR = data[sampleIndex];
-      const targetG = data[sampleIndex + 1];
-      const targetB = data[sampleIndex + 2];
-
-      // Thresholds for color distance in RGB space
-      const minDistance = 50;  // Fully transparent if distance is less than this
-      const maxDistance = 110; // Fully opaque if distance is greater than this
-      const range = maxDistance - minDistance;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const a = data[i + 3];
-
-        if (a === 0) continue; // Already transparent
-
-        // Manhattan distance
-        const distance = Math.abs(r - targetR) + Math.abs(g - targetG) + Math.abs(b - targetB);
-
-        if (distance < minDistance) {
-          data[i + 3] = 0;
-        } else if (distance < maxDistance) {
-          const factor = (distance - minDistance) / range; // 0 to 1
-          data[i + 3] = Math.max(0, Math.floor(a * factor));
-        }
-      }
-
-      ctx.putImageData(imgData, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
-    });
-    img.addEventListener('error', (error) => reject(error));
-    img.src = base64Image;
-  });
-
 // Utility function to apply a solid background color behind a transparent image
 const applyBackgroundColor = (base64Image: string, color: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -155,24 +100,55 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
   const [removeBg, setRemoveBg] = useState(false);
   const [bgColor, setBgColor] = useState<string>('transparent');
   const [cropperImage, setCropperImage] = useState(imageSrc);
+  
+  // AI Progress States
+  const [aiProgress, setAiProgress] = useState<number | null>(null);
+  const [aiStep, setAiStep] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
-  // Apply real-time background removal to the image source inside the cropper
+  // Apply AI-based background removal to the image source inside the cropper
   useEffect(() => {
     if (removeBg) {
       setLoading(true);
-      removeBackgroundAuto(imageSrc)
-        .then((processed) => {
-          setCropperImage(processed);
+      setAiProgress(0);
+      setAiStep('Menyiapkan model AI...');
+      
+      removeBackground(imageSrc, {
+        progress: (step, current, total) => {
+          const pct = Math.round((current / total) * 100);
+          setAiProgress(pct);
+          if (step.includes('fetch')) {
+            setAiStep(`Mengunduh model AI: ${pct}%`);
+          } else if (step.includes('compute')) {
+            setAiStep(`Memotong latar belakang: ${pct}%`);
+          } else {
+            setAiStep(`Memproses: ${pct}%`);
+          }
+        }
+      })
+        .then((blob) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setCropperImage(reader.result as string);
+            setAiProgress(null);
+            setAiStep('');
+          };
+          reader.readAsDataURL(blob);
         })
         .catch((err) => {
           console.error('Error processing background removal:', err);
+          alert('Gagal menggunakan AI background remover. Menggunakan foto asli.');
+          setRemoveBg(false);
+          setAiProgress(null);
+          setAiStep('');
         })
         .finally(() => {
           setLoading(false);
         });
     } else {
       setCropperImage(imageSrc);
+      setAiProgress(null);
+      setAiStep('');
     }
   }, [removeBg, imageSrc]);
 
@@ -222,7 +198,8 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
           </div>
           <button 
             onClick={onCancel}
-            className="text-slate-400 hover:text-slate-600 transition p-1 hover:bg-slate-100 rounded-lg cursor-pointer"
+            disabled={loading}
+            className="text-slate-400 hover:text-slate-600 transition p-1 hover:bg-slate-100 rounded-lg cursor-pointer disabled:opacity-50"
           >
             <X className="w-5 h-5" />
           </button>
@@ -249,13 +226,43 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
               }
             }}
           />
+
+          {/* AI Processing Overlay */}
+          {aiProgress !== null && (
+            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-30 flex flex-col items-center justify-center gap-4 p-6 text-center">
+              {/* Premium Glow Spinner */}
+              <div className="relative h-12 w-12 flex items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-30" />
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-transparent border-t-indigo-500 border-r-indigo-500" />
+              </div>
+              
+              {/* Progress Text */}
+              <div className="space-y-1.5 w-full max-w-xs">
+                <div className="flex items-center justify-center gap-1.5 text-indigo-400">
+                  <Sparkles className="w-4 h-4 animate-pulse" />
+                  <p className="text-sm font-bold text-zinc-100">Menghapus Latar (AI)</p>
+                </div>
+                <p className="text-xs text-zinc-300 font-semibold">{aiStep}</p>
+                <p className="text-[10px] text-zinc-400 font-mono">Diproses aman & lokal di browser Anda</p>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-3 shadow-inner">
+                  <div 
+                    className="bg-indigo-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_8px_#6366f1]"
+                    style={{ width: `${aiProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Zoom Controls */}
         <div className="flex items-center gap-3 py-5 w-full text-slate-700 font-medium px-1">
           <button 
             onClick={() => setZoom(Math.max(1, zoom - 0.2))}
-            className="text-slate-400 hover:text-indigo-600 transition p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer"
+            disabled={loading}
+            className="text-slate-400 hover:text-indigo-600 transition p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer disabled:opacity-50"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -267,28 +274,34 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             max={3}
             step={0.1}
             aria-label="Zoom"
+            disabled={loading}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-grow h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            className="flex-grow h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-50"
           />
 
           <button 
             onClick={() => setZoom(Math.min(3, zoom + 0.2))}
-            className="text-slate-400 hover:text-indigo-600 transition p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer"
+            disabled={loading}
+            className="text-slate-400 hover:text-indigo-600 transition p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer disabled:opacity-50"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
         </div>
 
         {/* BG Removal Option */}
-        <div className="flex items-center gap-2 pb-4 w-full justify-start px-2">
+        <div className="flex flex-col gap-3 pb-4 w-full items-start px-2">
           <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={removeBg}
+              disabled={loading}
               onChange={(e) => setRemoveBg(e.target.checked)}
-              className="w-4 h-4 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer"
+              className="w-4 h-4 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer disabled:opacity-50"
             />
-            <span>Hapus Latar Belakang Putih / Terang (Transparan)</span>
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500 fill-indigo-100" />
+              Hapus Latar Belakang Otomatis (Canva AI Style)
+            </span>
           </label>
         </div>
 
@@ -302,7 +315,8 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             <button
               type="button"
               onClick={() => setBgColor('transparent')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              disabled={loading}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
                 bgColor === 'transparent'
                   ? 'bg-indigo-50 border-indigo-500 text-indigo-600 shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -314,7 +328,8 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             <button
               type="button"
               onClick={() => setBgColor('#df1919')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              disabled={loading}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
                 bgColor === '#df1919'
                   ? 'bg-red-50 border-red-500 text-red-600 shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -327,7 +342,8 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             <button
               type="button"
               onClick={() => setBgColor('#2b539f')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              disabled={loading}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
                 bgColor === '#2b539f'
                   ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -338,12 +354,13 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             </button>
 
             {/* Custom Color Picker option */}
-            <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50 transition cursor-pointer relative">
+            <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50 transition cursor-pointer relative disabled:opacity-50">
               <input
                 type="color"
                 value={bgColor !== 'transparent' && bgColor !== '#df1919' && bgColor !== '#2b539f' ? bgColor : '#cccccc'}
+                disabled={loading}
                 onChange={(e) => setBgColor(e.target.value)}
-                className="w-4 h-4 border-none p-0 cursor-pointer bg-transparent rounded"
+                className="w-4 h-4 border-none p-0 cursor-pointer bg-transparent rounded disabled:opacity-50"
               />
               <span className="text-xs font-semibold text-slate-600">Kustom</span>
             </div>
@@ -364,7 +381,7 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             disabled={loading}
             className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition duration-200 text-sm cursor-pointer shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 flex items-center gap-1.5 disabled:opacity-50"
           >
-            {loading ? (
+            {loading && aiProgress === null ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-transparent border-t-white" />
                 <span>Memotong...</span>
