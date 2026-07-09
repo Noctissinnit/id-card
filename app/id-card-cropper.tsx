@@ -300,7 +300,7 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
             />
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-indigo-500 fill-indigo-100" />
-              Hapus Latar Belakang Otomatis (Canva AI Style)
+              Hapus Latar Belakang Otomatis (AI)
             </span>
           </label>
         </div>
