@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import { ZoomIn, ZoomOut, Scissors, X } from 'lucide-react';
 
@@ -61,6 +61,62 @@ async function getCroppedImg(
   return canvas.toDataURL('image/png');
 }
 
+// Utility function to remove background from a base64 image (automatically samples corner color)
+const removeBackgroundAuto = (base64Image: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.addEventListener('load', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(base64Image);
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+
+      // Sample background color slightly offset from top-left (e.g., x=10, y=10) to avoid borders
+      const sampleX = Math.min(10, canvas.width - 1);
+      const sampleY = Math.min(10, canvas.height - 1);
+      const sampleIndex = (sampleY * canvas.width + sampleX) * 4;
+      const targetR = data[sampleIndex];
+      const targetG = data[sampleIndex + 1];
+      const targetB = data[sampleIndex + 2];
+
+      // Thresholds for color distance in RGB space
+      const minDistance = 50;  // Fully transparent if distance is less than this
+      const maxDistance = 110; // Fully opaque if distance is greater than this
+      const range = maxDistance - minDistance;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const a = data[i + 3];
+
+        if (a === 0) continue; // Already transparent
+
+        // Manhattan distance
+        const distance = Math.abs(r - targetR) + Math.abs(g - targetG) + Math.abs(b - targetB);
+
+        if (distance < minDistance) {
+          data[i + 3] = 0;
+        } else if (distance < maxDistance) {
+          const factor = (distance - minDistance) / range; // 0 to 1
+          data[i + 3] = Math.max(0, Math.floor(a * factor));
+        }
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    });
+    img.addEventListener('error', (error) => reject(error));
+    img.src = base64Image;
+  });
+
 // Utility function to apply a solid background color behind a transparent image
 const applyBackgroundColor = (base64Image: string, color: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -96,8 +152,29 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [removeBg, setRemoveBg] = useState(false);
   const [bgColor, setBgColor] = useState<string>('transparent');
+  const [cropperImage, setCropperImage] = useState(imageSrc);
   const [loading, setLoading] = useState(false);
+
+  // Apply real-time background removal to the image source inside the cropper
+  useEffect(() => {
+    if (removeBg) {
+      setLoading(true);
+      removeBackgroundAuto(imageSrc)
+        .then((processed) => {
+          setCropperImage(processed);
+        })
+        .catch((err) => {
+          console.error('Error processing background removal:', err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setCropperImage(imageSrc);
+    }
+  }, [removeBg, imageSrc]);
 
   const onCropChange = (newCrop: { x: number; y: number }) => {
     setCrop(newCrop);
@@ -115,7 +192,7 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
     if (!croppedAreaPixels) return;
     setLoading(true);
     try {
-      let croppedBase64 = await getCroppedImg(imageSrc, croppedAreaPixels);
+      let croppedBase64 = await getCroppedImg(cropperImage, croppedAreaPixels);
       
       // Apply background color if selected
       if (bgColor !== 'transparent') {
@@ -154,7 +231,7 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
         {/* Cropper Box */}
         <div className="relative w-full h-80 bg-zinc-950 rounded-2xl overflow-hidden shadow-inner border border-slate-200">
           <Cropper
-            image={imageSrc}
+            image={cropperImage}
             crop={crop}
             zoom={zoom}
             aspect={1} // Square aspect ratio since we crop to circle
@@ -202,10 +279,21 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
           </button>
         </div>
 
-
+        {/* BG Removal Option */}
+        <div className="flex items-center gap-2 pb-4 w-full justify-start px-2">
+          <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={removeBg}
+              onChange={(e) => setRemoveBg(e.target.checked)}
+              className="w-4 h-4 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer"
+            />
+            <span>Hapus Latar Belakang Putih / Terang (Transparan)</span>
+          </label>
+        </div>
 
         {/* BG Color Option */}
-        <div className="w-full flex flex-col gap-2 pb-5 px-2 items-start">
+        <div className="w-full flex flex-col gap-2 pb-5 px-2 items-start border-t border-slate-100 pt-3.5">
           <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
             Warna Latar Foto Baru (Opsional)
           </span>
