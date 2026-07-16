@@ -4,6 +4,17 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
 import { ZoomIn, ZoomOut, Scissors, X, Sparkles } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
+// @ts-expect-error - onnxruntime-web types exist but can't be resolved via package.json "exports"
+import * as ort from 'onnxruntime-web';
+
+// Configure ONNX Runtime WASM threading on the ACTUAL module object.
+// Setting globalThis.ort has no effect — the library uses its own internal
+// module reference.  With Cross-Origin Isolation headers enabled in
+// next.config.ts, proper multi-threading via SharedArrayBuffer works.
+// We cap threads at 4 to balance speed and memory on typical machines.
+if (typeof window !== 'undefined') {
+  ort.env.wasm.numThreads = 1;
+}
 
 interface Area {
   x: number;
@@ -106,45 +117,95 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
   const [aiStep, setAiStep] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
+  // Global error listener to alert exact error message on screen
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      alert(`Uncaught Error: ${event.message}\nAt: ${event.filename}:${event.lineno}`);
+    };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      alert(`Unhandled Promise Rejection: ${event.reason?.message || event.reason}`);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
+
   // Apply AI-based background removal to the image source inside the cropper
   useEffect(() => {
     if (removeBg) {
+      if (typeof removeBackground !== 'function') {
+        alert('Error: removeBackground is not a function. Check library imports.');
+        setRemoveBg(false);
+        return;
+      }
+
       setLoading(true);
       setAiProgress(0);
       setAiStep('Menyiapkan model AI...');
       
-      removeBackground(imageSrc, {
-        progress: (step, current, total) => {
-          const pct = Math.round((current / total) * 100);
-          setAiProgress(pct);
-          if (step.includes('fetch')) {
-            setAiStep(`Mengunduh model AI: ${pct}%`);
-          } else if (step.includes('compute')) {
-            setAiStep(`Memotong latar belakang: ${pct}%`);
-          } else {
-            setAiStep(`Memproses: ${pct}%`);
+      try {
+        removeBackground(imageSrc, {
+          model: 'isnet_quint8',
+          device: 'cpu',
+          proxyToWorker: true,
+          progress: (step, current, total) => {
+            try {
+              const safeTotal = total || 1;
+              const safeCurrent = current || 0;
+              const pct = Math.round((safeCurrent / safeTotal) * 100);
+              
+              setAiProgress(pct);
+              if (step && typeof step === 'string') {
+                if (step.includes('fetch')) {
+                  setAiStep(`Mengunduh model AI: ${pct}%`);
+                } else if (step.includes('compute')) {
+                  setAiStep(`Memotong latar belakang: ${pct}%`);
+                } else {
+                  setAiStep(`Memproses: ${pct}%`);
+                }
+              } else {
+                setAiStep(`Memproses: ${pct}%`);
+              }
+            } catch (err) {
+              console.error('Error inside progress callback:', err);
+            }
           }
-        }
-      })
-        .then((blob) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setCropperImage(reader.result as string);
+        })
+          .then((blob) => {
+            if (!blob) {
+              throw new Error('Hasil pemotongan background (Blob) kosong.');
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setCropperImage(reader.result as string);
+              setAiProgress(null);
+              setAiStep('');
+            };
+            reader.readAsDataURL(blob);
+          })
+          .catch((err) => {
+            console.error('Error processing background removal:', err);
+            alert('Gagal menggunakan AI background remover. Menggunakan foto asli.');
+            setRemoveBg(false);
             setAiProgress(null);
             setAiStep('');
-          };
-          reader.readAsDataURL(blob);
-        })
-        .catch((err) => {
-          console.error('Error processing background removal:', err);
-          alert('Gagal menggunakan AI background remover. Menggunakan foto asli.');
-          setRemoveBg(false);
-          setAiProgress(null);
-          setAiStep('');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      } catch (err) {
+        console.error('Synchronous error in background removal:', err);
+        alert('Terjadi kesalahan saat memproses background removal. Menggunakan foto asli.');
+        setRemoveBg(false);
+        setAiProgress(null);
+        setAiStep('');
+        setLoading(false);
+      }
     } else {
       setCropperImage(imageSrc);
       setAiProgress(null);

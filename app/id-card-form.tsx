@@ -18,6 +18,43 @@ import { saveSessionAction } from './actions';
 import { savePhoto } from './db';
 import IDCardCropper from './id-card-cropper';
 
+const resizeImage = (base64Str: string, maxWidth = 800, maxHeight = 800): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64Str;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      } else {
+        resolve(base64Str);
+      }
+    };
+    img.onerror = () => {
+      resolve(base64Str);
+    };
+  });
+};
+
 const THEME_OPTIONS = [
   {
     id: 'karya-bakti',
@@ -63,7 +100,11 @@ const THEME_OPTIONS = [
   // }
 ];
 
-export default function IDCardForm() {
+interface IDCardFormProps {
+  defaultUnit?: string;
+}
+
+export default function IDCardForm({ defaultUnit }: IDCardFormProps = {}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +113,7 @@ export default function IDCardForm() {
   const [nama, setNama] = useState('');
   const [nik, setNik] = useState('');
   const [jabatan, setJabatan] = useState('');
-  const [departemen, setDepartemen] = useState('');
+  const [departemen, setDepartemen] = useState(defaultUnit || '');
   const [theme, setTheme] = useState('karya-bakti');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -100,8 +141,9 @@ export default function IDCardForm() {
       
       // Read file as base64 to open cropper modal
       const reader = new FileReader();
-      reader.onload = () => {
-        setRawImageSrc(reader.result as string);
+      reader.onload = async () => {
+        const resized = await resizeImage(reader.result as string);
+        setRawImageSrc(resized);
       };
       reader.readAsDataURL(file);
     }
@@ -128,8 +170,9 @@ export default function IDCardForm() {
       
       // Read file as base64 to open cropper modal
       const reader = new FileReader();
-      reader.onload = () => {
-        setRawImageSrc(reader.result as string);
+      reader.onload = async () => {
+        const resized = await resizeImage(reader.result as string);
+        setRawImageSrc(resized);
       };
       reader.readAsDataURL(file);
     }
@@ -277,7 +320,7 @@ export default function IDCardForm() {
 
             <div className="space-y-2">
               <label htmlFor="departemen" className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
-                Divisi / Departemen
+                Divisi / Departemen {defaultUnit && <span className="text-slate-400 text-[10px] font-mono normal-case tracking-normal">({defaultUnit} locked)</span>}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -288,8 +331,13 @@ export default function IDCardForm() {
                   id="departemen"
                   value={departemen}
                   onChange={(e) => setDepartemen(e.target.value)}
+                  disabled={!!defaultUnit}
                   placeholder="Contoh: Product Engineering"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-sm text-slate-900 placeholder-slate-400 transition outline-none shadow-inner"
+                  className={`w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm transition outline-none shadow-inner ${
+                    defaultUnit 
+                      ? 'bg-slate-100/80 text-slate-400 cursor-not-allowed select-none' 
+                      : 'bg-slate-50/50 text-slate-900 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-400'
+                  }`}
                 />
               </div>
             </div>

@@ -7,6 +7,8 @@ export async function signUpAction(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const name = formData.get('name') as string
+  const unitId = formData.get('unit_id') ? Number(formData.get('unit_id')) : undefined
+  const role = formData.get('role') as string
 
   if (!email || !password) {
     return { error: 'Email and password are required' }
@@ -20,6 +22,8 @@ export async function signUpAction(formData: FormData) {
     options: {
       data: {
         name: name || '',
+        unit_id: unitId,
+        role: role,
       },
     },
   })
@@ -76,10 +80,10 @@ export async function getUserAction() {
     return { user: null }
   }
 
-  // Get user details and join with instansis
+  // Get user details and join with units
   const { data: detail, error: dbError } = await supabase
     .from('user_details')
-    .select('id, user_id, instansi_id, instansis ( id, nama )')
+    .select('id, user_id, unit_id, role, units ( id, nama )')
     .eq('user_id', user.id)
     .single()
 
