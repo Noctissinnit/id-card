@@ -102,9 +102,15 @@ const THEME_OPTIONS = [
 
 interface IDCardFormProps {
   defaultUnit?: string;
+  customTemplate?: {
+    id: number;
+    nama: string;
+    card_design?: string | null;
+    card_design_back?: string | null;
+  } | null;
 }
 
-export default function IDCardForm({ defaultUnit }: IDCardFormProps = {}) {
+export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormProps = {}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -398,49 +404,69 @@ export default function IDCardForm({ defaultUnit }: IDCardFormProps = {}) {
           </div>
         </div>
 
-        {/* Theme Selector */}
-        <div className="space-y-3 pt-4 border-t border-slate-250">
-          <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block flex items-center gap-1.5">
-            <Palette className="w-4.5 h-4.5 text-indigo-500" />
-            Pilih Tema Desain ID Card
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
-            {THEME_OPTIONS.map((opt) => {
-              const isSelected = theme === opt.id;
-              return (
-                <div
-                  key={opt.id}
-                  onClick={() => setTheme(opt.id)}
-                  className={`cursor-pointer rounded-xl p-3 border transition flex flex-col justify-between gap-2 text-left h-24 relative overflow-hidden group ${
-                    isSelected 
-                      ? 'border-indigo-500 bg-indigo-50/30 shadow-md shadow-indigo-500/5' 
-                      : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
-                  }`}
-                >
-                  <div className="flex justify-between items-start z-10">
-                    <span className="text-[10px] font-bold text-slate-800 tracking-tight leading-none group-hover:text-indigo-650">
-                      {opt.name}
-                    </span>
-                    {isSelected && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                    )}
-                  </div>
-                  
-                  {/* Miniature Gradient Strip */}
-                  <div className="flex gap-0.5 w-full h-1 rounded-full overflow-hidden mt-1.5 z-10">
-                    {opt.colors.map((c, idx) => (
-                      <div key={idx} className={`flex-1 bg-gradient-to-r ${c}`} />
-                    ))}
-                  </div>
-
-                  <span className="text-[8px] text-slate-500 leading-tight line-clamp-2 z-10">
-                    {opt.desc}
-                  </span>
-                </div>
-              );
-            })}
+        {/* Theme Selector (or locked custom unit template indicator) */}
+        {customTemplate?.card_design ? (
+          <div className="space-y-3 pt-4 border-t border-slate-250">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block flex items-center gap-1.5">
+              <Palette className="w-4.5 h-4.5 text-indigo-500" />
+              Desain Kartu Unit
+            </label>
+            <div className="p-4 bg-indigo-50/40 border border-indigo-100/50 rounded-2xl flex items-center gap-4">
+              <div className="w-12 aspect-[3.2/5] border border-slate-200 rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                <img src={customTemplate.card_design} alt="Custom Unit Template" className="w-full h-full object-cover" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">Menggunakan Template Desain Unit</h4>
+                <p className="text-[10px] text-slate-500 leading-relaxed mt-1">
+                  Desain kartu dicetak otomatis menggunakan template desain resmi yang diupload oleh Admin untuk unit <strong>{customTemplate.nama}</strong>.
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-3 pt-4 border-t border-slate-250">
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block flex items-center gap-1.5">
+              <Palette className="w-4.5 h-4.5 text-indigo-500" />
+              Pilih Tema Desain ID Card
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3">
+              {THEME_OPTIONS.map((opt) => {
+                const isSelected = theme === opt.id;
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => setTheme(opt.id)}
+                    className={`cursor-pointer rounded-xl p-3 border transition flex flex-col justify-between gap-2 text-left h-24 relative overflow-hidden group ${
+                      isSelected 
+                        ? 'border-indigo-500 bg-indigo-50/30 shadow-md shadow-indigo-500/5' 
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start z-10">
+                      <span className="text-[10px] font-bold text-slate-800 tracking-tight leading-none group-hover:text-indigo-650">
+                        {opt.name}
+                      </span>
+                      {isSelected && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                      )}
+                    </div>
+                    
+                    {/* Miniature Gradient Strip */}
+                    <div className="flex gap-0.5 w-full h-1 rounded-full overflow-hidden mt-1.5 z-10">
+                      {opt.colors.map((c, idx) => (
+                        <div key={idx} className={`flex-1 bg-gradient-to-r ${c}`} />
+                      ))}
+                    </div>
+
+                    <span className="text-[8px] text-slate-500 leading-tight line-clamp-2 z-10">
+                      {opt.desc}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <button

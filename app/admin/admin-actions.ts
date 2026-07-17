@@ -20,15 +20,30 @@ async function requireAdmin() {
   return user
 }
 
-// ── Get all units (for dropdown) ─────────────────────────────────────
+// ── Get all units (for dropdown & management) ─────────────────────────
 export async function getUnitsAction() {
   const supabase = await createClient()
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('units')
-    .select('id, nama')
+    .select('id, nama, card_design, card_design_back')
     .order('nama')
 
-  if (error) return { error: error.message, units: [] }
+  if (error) {
+    // If the columns don't exist yet, fall back to basic query
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('units')
+      .select('id, nama')
+      .order('nama')
+
+    if (fallbackError) {
+      return { error: fallbackError.message, units: [] }
+    }
+    data = fallbackData.map(u => ({
+      ...u,
+      card_design: null,
+      card_design_back: null
+    })) as any
+  }
   return { units: data || [] }
 }
 
@@ -37,17 +52,21 @@ export async function createUserAction(formData: FormData) {
   try {
     await requireAdmin()
 
-    const email = formData.get('email') as string
+    const username = (formData.get('username') || formData.get('email')) as string
     const password = formData.get('password') as string
     const name = formData.get('name') as string
     const unitId = formData.get('unit_id') ? Number(formData.get('unit_id')) : null
 
-    if (!email || !password) {
-      return { error: 'Email dan password wajib diisi.' }
+    if (!username || !password) {
+      return { error: 'Username dan password wajib diisi.' }
     }
     if (password.length < 6) {
       return { error: 'Password minimal 6 karakter.' }
     }
+
+    const email = username.includes('@')
+      ? username.trim()
+      : `${username.trim()}@idcard.local`
 
     const admin = createAdminClient()
 
@@ -63,14 +82,62 @@ export async function createUserAction(formData: FormData) {
       return { error: authError.message }
     }
 
-    // 2. Insert user_details row
-    const { error: detailError } = await admin
+    // 2. Insert or Update user_details row (handling auto-insertion triggers if they exist)
+    const { data: existingDetail } = await admin
       .from('user_details')
-      .insert({
-        user_id: authData.user.id,
-        unit_id: unitId,
-        role: 'user', // Always create as regular user
-      })
+      .select('id')
+      .eq('user_id', authData.user.id)
+      .maybeSingle()
+
+    const detailPayload: any = {
+      user_id: authData.user.id,
+      unit_id: unitId,
+      role: 'user', // Always create as regular user
+    }
+
+    let detailError;
+
+    if (existingDetail) {
+      // If a database trigger already created the row, update it
+      const { error: updateError } = await admin
+        .from('user_details')
+        .update({
+          unit_id: unitId,
+          username: username.toLowerCase().trim()
+        })
+        .eq('user_id', authData.user.id)
+
+      if (updateError) {
+        if (updateError.message.includes('column') && updateError.message.includes('username')) {
+          const { error: retryError } = await admin
+            .from('user_details')
+            .update({ unit_id: unitId })
+            .eq('user_id', authData.user.id)
+          detailError = retryError
+        } else {
+          detailError = updateError
+        }
+      }
+    } else {
+      // If no trigger created it, insert a new row
+      const { error: tryError } = await admin
+        .from('user_details')
+        .insert({
+          ...detailPayload,
+          username: username.toLowerCase().trim()
+        })
+
+      if (tryError) {
+        if (tryError.message.includes('column') && tryError.message.includes('username')) {
+          const { error: retryError } = await admin
+            .from('user_details')
+            .insert(detailPayload)
+          detailError = retryError
+        } else {
+          detailError = tryError
+        }
+      }
+    }
 
     if (detailError) {
       // Rollback: delete the auth user we just created
@@ -92,6 +159,7 @@ export async function updateUserAction(formData: FormData) {
 
     const userDetailId = formData.get('id') as string
     const userId = formData.get('user_id') as string
+    const username = formData.get('username') as string
     const name = formData.get('name') as string
     const unitId = formData.get('unit_id') ? Number(formData.get('unit_id')) : null
 
@@ -104,7 +172,7 @@ export async function updateUserAction(formData: FormData) {
     // Prevent editing admin users
     const { data: target } = await admin
       .from('user_details')
-      .select('role')
+      .select('role, username')
       .eq('id', userDetailId)
       .single()
 
@@ -112,7 +180,13 @@ export async function updateUserAction(formData: FormData) {
       return { error: 'Tidak bisa mengedit user admin.' }
     }
 
-    // 1. Update user metadata (name) and optionally password
+    const newUsername = username ? username.trim().toLowerCase() : null
+
+    // Get current auth user email to check if it's derived
+    const { data: authUser } = await admin.auth.admin.getUserById(userId)
+    const currentEmail = authUser?.user?.email || ''
+
+    // 1. Update user metadata (name), password, and email
     const updatePayload: any = {
       user_metadata: { name: name || '' },
     }
@@ -125,6 +199,11 @@ export async function updateUserAction(formData: FormData) {
       updatePayload.password = password
     }
 
+    // Sync auth email if username changed and current email was derived
+    if (newUsername && target?.username !== newUsername && currentEmail.endsWith('@idcard.local')) {
+      updatePayload.email = `${newUsername}@idcard.local`
+    }
+
     const { error: authError } = await admin.auth.admin.updateUserById(userId, updatePayload)
 
     if (authError) {
@@ -132,10 +211,28 @@ export async function updateUserAction(formData: FormData) {
     }
 
     // 2. Update user_details
-    const { error: detailError } = await admin
+    const updateDetails: any = { unit_id: unitId }
+    if (newUsername) {
+      updateDetails.username = newUsername
+    }
+
+    let detailError;
+    const { error: tryUpdateError } = await admin
       .from('user_details')
-      .update({ unit_id: unitId })
+      .update(updateDetails)
       .eq('id', userDetailId)
+
+    if (tryUpdateError) {
+      if (tryUpdateError.message.includes('column') && tryUpdateError.message.includes('username')) {
+        const { error: retryUpdateError } = await admin
+          .from('user_details')
+          .update({ unit_id: unitId })
+          .eq('id', userDetailId)
+        detailError = retryUpdateError
+      } else {
+        detailError = tryUpdateError
+      }
+    }
 
     if (detailError) {
       return { error: detailError.message }
@@ -185,6 +282,129 @@ export async function deleteUserAction(userDetailId: string, userId: string) {
 
     if (authError) {
       return { error: `User detail terhapus, tapi gagal menghapus auth user: ${authError.message}` }
+    }
+
+    revalidatePath('/admin')
+    return { success: true }
+  } catch (err: any) {
+    return { error: err.message || 'Terjadi kesalahan.' }
+  }
+}
+
+// ── CREATE unit ──────────────────────────────────────────────────────
+export async function createUnitAction(formData: FormData) {
+  try {
+    await requireAdmin()
+
+    const nama = formData.get('nama') as string
+    const cardDesign = formData.get('card_design') as string // base64 string
+    const cardDesignBack = formData.get('card_design_back') as string // base64 string
+
+    if (!nama || nama.trim() === '') {
+      return { error: 'Nama unit wajib diisi.' }
+    }
+
+    const admin = createAdminClient()
+
+    const { data, error } = await admin
+      .from('units')
+      .insert({
+        nama: nama.trim(),
+        card_design: cardDesign || null,
+        card_design_back: cardDesignBack || null
+      })
+      .select()
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    revalidatePath('/admin')
+    return { success: true, unit: data?.[0] }
+  } catch (err: any) {
+    return { error: err.message || 'Terjadi kesalahan.' }
+  }
+}
+
+// ── UPDATE unit ──────────────────────────────────────────────────────
+export async function updateUnitAction(formData: FormData) {
+  try {
+    await requireAdmin()
+
+    const unitId = formData.get('id') ? Number(formData.get('id')) : null
+    const nama = formData.get('nama') as string
+    const cardDesign = formData.get('card_design') as string // base64 string or "REMOVE" or empty
+    const cardDesignBack = formData.get('card_design_back') as string // base64 string or "REMOVE" or empty
+
+    if (!unitId) {
+      return { error: 'ID unit tidak valid.' }
+    }
+    if (!nama || nama.trim() === '') {
+      return { error: 'Nama unit wajib diisi.' }
+    }
+
+    const admin = createAdminClient()
+
+    const updatePayload: any = {
+      nama: nama.trim()
+    }
+
+    if (cardDesign !== null && cardDesign !== undefined) {
+      updatePayload.card_design = cardDesign === 'REMOVE' ? null : (cardDesign || null)
+    }
+    if (cardDesignBack !== null && cardDesignBack !== undefined) {
+      updatePayload.card_design_back = cardDesignBack === 'REMOVE' ? null : (cardDesignBack || null)
+    }
+
+    const { data, error } = await admin
+      .from('units')
+      .update(updatePayload)
+      .eq('id', unitId)
+      .select()
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    revalidatePath('/admin')
+    return { success: true, unit: data?.[0] }
+  } catch (err: any) {
+    return { error: err.message || 'Terjadi kesalahan.' }
+  }
+}
+
+// ── DELETE unit ──────────────────────────────────────────────────────
+export async function deleteUnitAction(unitId: number) {
+  try {
+    await requireAdmin()
+
+    if (!unitId) {
+      return { error: 'ID unit tidak valid.' }
+    }
+
+    const admin = createAdminClient()
+
+    // Check if there are user_details referencing this unit
+    const { count, error: countError } = await admin
+      .from('user_details')
+      .select('*', { count: 'exact', head: true })
+      .eq('unit_id', unitId)
+
+    if (countError) {
+      return { error: countError.message }
+    }
+
+    if (count && count > 0) {
+      return { error: 'Tidak bisa menghapus unit karena masih memiliki user aktif di dalamnya.' }
+    }
+
+    const { error } = await admin
+      .from('units')
+      .delete()
+      .eq('id', unitId)
+
+    if (error) {
+      return { error: error.message }
     }
 
     revalidatePath('/admin')

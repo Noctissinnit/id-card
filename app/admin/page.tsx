@@ -38,10 +38,32 @@ export default async function AdminDashboardPage() {
 
   // Use admin client to bypass RLS and fetch ALL user details
   const adminDb = createAdminClient()
-  const { data: userDetails, error } = await adminDb
-    .from('user_details')
-    .select('id, user_id, unit_id, role, created_at, units ( id, nama )')
-    .order('created_at', { ascending: false })
+  let userDetails: any = null
+  let error: any = null
+
+  try {
+    const { data, error: queryError } = await adminDb
+      .from('user_details')
+      .select('id, user_id, unit_id, role, username, created_at, units ( id, nama )')
+      .order('created_at', { ascending: false })
+
+    if (queryError) {
+      if (queryError.message.includes('column') && queryError.message.includes('username')) {
+        const { data: fallbackData, error: fallbackError } = await adminDb
+          .from('user_details')
+          .select('id, user_id, unit_id, role, created_at, units ( id, nama )')
+          .order('created_at', { ascending: false })
+        userDetails = fallbackData
+        error = fallbackError
+      } else {
+        error = queryError
+      }
+    } else {
+      userDetails = data
+    }
+  } catch (err: any) {
+    error = err
+  }
 
   // Fetch auth users for email/name data (using admin client)
   let authUsersMap: Record<string, { email: string; name: string }> = {}
@@ -60,8 +82,7 @@ export default async function AdminDashboardPage() {
     // Service role key not set — fall back to user_id only
   }
 
-  // Merge user details with auth data
-  const usersList = (userDetails || []).map(ud => ({
+  const usersList = (userDetails || []).map((ud: any) => ({
     ...ud,
     id: String(ud.id),
     email: authUsersMap[ud.user_id]?.email || '',
@@ -73,9 +94,9 @@ export default async function AdminDashboardPage() {
 
   // Calculate statistics
   const totalUsers = usersList.length
-  const totalAdmins = usersList.filter(u => u.role === 'admin').length
-  const totalIT = usersList.filter(u => getUnitName(u.units) === 'IT').length
-  const totalYayasan = usersList.filter(u => getUnitName(u.units) === 'Yayasan').length
+  const totalAdmins = usersList.filter((u: any) => u.role === 'admin').length
+  const totalIT = usersList.filter((u: any) => getUnitName(u.units) === 'IT').length
+  const totalYayasan = usersList.filter((u: any) => getUnitName(u.units) === 'Yayasan').length
 
   return (
     <main className="min-h-screen w-full flex flex-col justify-between bg-slate-50 text-slate-900 relative overflow-hidden bg-grid-pattern py-10 px-4 md:px-8">
@@ -92,7 +113,7 @@ export default async function AdminDashboardPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 leading-tight">Admin Dashboard</h1>
-              <p className="text-xs text-slate-500">Welcome back, {user.name || 'Administrator'}</p>
+              <p className="text-xs text-slate-500">Welcome back, {user.detail?.username || (user.email && user.email.endsWith('@idcard.local') ? user.email.split('@')[0] : (user.name || 'Administrator'))}</p>
             </div>
           </div>
 

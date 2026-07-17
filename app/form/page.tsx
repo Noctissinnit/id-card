@@ -19,6 +19,14 @@ function getUnitName(units: any): string {
   return units.nama || 'Unassigned'
 }
 
+function getUnitTemplate(units: any) {
+  if (!units) return null
+  if (Array.isArray(units)) {
+    return units[0] || null
+  }
+  return units
+}
+
 export default async function FormPage() {
   const { user } = await getUserAction()
 
@@ -56,7 +64,7 @@ export default async function FormPage() {
               <h1 className="text-lg font-bold text-slate-950">ID Card Generation Portal</h1>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-1">
                 <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-semibold">
-                  {user.name || 'User'}
+                  {user.detail?.username || (user.email && user.email.endsWith('@idcard.local') ? user.email.split('@')[0] : (user.name || 'User'))}
                 </span>
                 <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
                   <Building className="w-2.5 h-2.5" />
@@ -80,9 +88,9 @@ export default async function FormPage() {
         {/* Form or Preview display */}
         <div className="w-full flex justify-center items-center">
           {!session ? (
-            <IDCardForm defaultUnit={getUnitName(user.detail?.units)} />
+            <IDCardForm defaultUnit={getUnitName(user.detail?.units)} customTemplate={getUnitTemplate(user.detail?.units)} />
           ) : (
-            <IDCardPreview data={session} />
+            <IDCardPreview data={session} customTemplate={getUnitTemplate(user.detail?.units)} />
           )}
         </div>
       </div>

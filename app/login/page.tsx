@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInAction, getUserAction } from '../auth-actions'
-import { Lock, Mail, CreditCard, ShieldAlert, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { Lock, User, CreditCard, ShieldAlert, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
     setError(null)
 
     const formData = new FormData()
-    formData.append('email', email)
+    formData.append('username', username)
     formData.append('password', password)
 
     const result = await signInAction(formData)
@@ -101,7 +101,7 @@ export default function LoginPage() {
             Sign In
           </h2>
           <p className="text-slate-400 text-xs mb-6">
-            Masukkan email dan password resmi Anda untuk melanjutkan
+            Masukkan username dan password resmi Anda untuk melanjutkan
           </p>
 
           {error && (
@@ -113,19 +113,19 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider block">
-                Email Address
+              <label htmlFor="username" className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider block">
+                Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="w-4 h-4" />
+                  <User className="w-4 h-4" />
                 </div>
                 <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
+                  type="text"
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Masukkan username"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-900 transition outline-none"
                   required
                 />

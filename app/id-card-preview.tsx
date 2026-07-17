@@ -252,9 +252,15 @@ const THEMES: Record<string, ThemeConfig> = {
 
 interface IDCardPreviewProps {
   data: IDCardSession;
+  customTemplate?: {
+    id: number;
+    nama: string;
+    card_design?: string | null;
+    card_design_back?: string | null;
+  } | null;
 }
 
-export default function IDCardPreview({ data }: IDCardPreviewProps) {
+export default function IDCardPreview({ data, customTemplate }: IDCardPreviewProps) {
   const router = useRouter();
   const [isFlipped, setIsFlipped] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string>('');
@@ -360,6 +366,172 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
 
   // ID Card Front Template
   const CardFront = ({ isExport = false }: { isExport?: boolean }) => {
+    if (customTemplate?.card_design) {
+      return (
+        <div 
+          className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none bg-white"
+          style={{
+            boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+            borderRadius: '16px',
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Background Image Template */}
+          <img 
+            src={customTemplate.card_design} 
+            alt="Card Template" 
+            crossOrigin="anonymous"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'fill',
+              zIndex: 0
+            }}
+          />
+
+          {/* Division (WF_GDG) -> Now replaced with Jabatan */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '25%',
+              left: '5%',
+              width: '90%',
+              height: '35px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              zIndex: 10
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'sans-serif',
+                fontWeight: '900',
+                fontSize: 
+                  (data.jabatan || '').length > 25 ? '11px' :
+                  (data.jabatan || '').length > 18 ? '13px' :
+                  (data.jabatan || '').length > 12 ? '15px' : '18px',
+                color: '#000000',
+                letterSpacing: '0.5px',
+                lineHeight: '1.2',
+                textAlign: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical'
+              }}
+            >
+              {data.jabatan || 'JABATAN'}
+            </span>
+          </div>
+
+          {/* NIK (690/03/05) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '35%',
+              left: 0,
+              width: '100%',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              zIndex: 10
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'sans-serif',
+                fontWeight: '900',
+                fontSize: (data.nik || '').length > 15 ? '13px' : '15px',
+                color: '#000000',
+                letterSpacing: '0.5px'
+              }}
+            >
+              {data.nik || '690/03/05'}
+            </span>
+          </div>
+
+          {/* Photo Container (Rectangular - sized to fit template's pre-printed box perfectly) */}
+          <div 
+            style={{
+              position: 'absolute',
+              top: '43%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '150px',
+              height: '200px',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: photoUrl ? 'transparent' : '#e4e4e7',
+              boxSizing: 'border-box',
+              zIndex: 10
+            }}
+          >
+            {photoUrl ? (
+              <img 
+                src={photoUrl} 
+                alt="Profile Photo" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#71717a' }}>
+                <User className="w-10 h-10" />
+                <span style={{ fontSize: '9px', fontFamily: 'sans-serif' }}>NO PHOTO</span>
+              </div>
+            )}
+          </div>
+
+          {/* Name (IKA) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '84%',
+              left: '5%',
+              width: '90%',
+              height: '52px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              zIndex: 10
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'sans-serif',
+                fontWeight: '900',
+                fontSize: 
+                  (data.nama || '').length > 25 ? '12px' :
+                  (data.nama || '').length > 20 ? '14px' :
+                  (data.nama || '').length > 15 ? '17px' : '21px',
+                color: '#000000',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                lineHeight: '1.2',
+                textAlign: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical'
+              }}
+            >
+              {data.nama || 'IKA'}
+            </span>
+          </div>
+        </div>
+      );
+    }
+
     if (data.theme === 'karya-bakti') {
       return (
         <div 
@@ -390,7 +562,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
           <div 
             style={{
               position: 'absolute',
-              top: '16.8%',
+              top: '17%',
               left: '50%',
               transform: 'translateX(-50%)',
               width: '78.5%',
@@ -600,12 +772,12 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
 
   // ID Card Back Template
   const CardBack = ({ isExport = false }: { isExport?: boolean }) => {
-    if (data.theme === 'karya-bakti') {
+    if (data.theme === 'karya-bakti' || customTemplate?.card_design_back) {
       return (
         <div 
           className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none"
           style={{
-            background: 'radial-gradient(circle at 50% 50%, #0d47a1, #08316f)',
+            background: customTemplate?.card_design_back ? 'white' : 'radial-gradient(circle at 50% 50%, #0d47a1, #08316f)',
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
             borderRadius: '16px',
             padding: '24px',
@@ -613,33 +785,55 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            color: 'white'
+            color: customTemplate?.card_design_back ? '#1e293b' : 'white'
           }}
         >
-          <div className="absolute top-0 left-0 w-full h-[6px] bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
+          {customTemplate?.card_design_back && (
+            <img 
+              src={customTemplate.card_design_back} 
+              alt="Card Back Template" 
+              crossOrigin="anonymous"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'fill',
+                zIndex: 0
+              }}
+            />
+          )}
+
+          {!customTemplate?.card_design_back && (
+            <div className="absolute top-0 left-0 w-full h-[6px] bg-gradient-to-r from-transparent via-blue-400/40 to-transparent" />
+          )}
           
           {/* Back Header */}
-          <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px' }}>
-            <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 'bold', color: '#93c5fd', letterSpacing: '1px' }}>INFO KEANGGOTAAN</span>
-            <Building className="w-4 h-4 text-blue-400" />
+          <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px', position: 'relative', zIndex: 10 }}>
+            <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 'bold', color: customTemplate?.card_design_back ? '#475569' : '#93c5fd', letterSpacing: '1px' }}>INFO KEANGGOTAAN</span>
+            <Building className={`w-4 h-4 ${customTemplate?.card_design_back ? 'text-slate-500' : 'text-blue-400'}`} />
           </div>
-
-          {/* Magnetic stripe simulator */}
-          <div 
-            className="w-full bg-zinc-950 border-y border-blue-900/40 absolute left-0" 
-            style={{ height: '36px', top: '48px' }}
-          />
+ 
+          {/* Magnetic stripe simulator - hidden on custom designs */}
+          {!customTemplate?.card_design_back && (
+            <div 
+              className="w-full bg-zinc-950 border-y border-blue-900/40 absolute left-0" 
+              style={{ height: '36px', top: '48px' }}
+            />
+          )}
 
           {/* Terms and Conditions (indonesian) */}
-          <div style={{ marginTop: '48px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
+          {/* Terms and Conditions (indonesian) */}
+          <div style={{ marginTop: '48px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', position: 'relative', zIndex: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <p style={{ fontSize: '8.5px', color: '#cbd5e1', fontFamily: 'sans-serif', margin: '0', lineHeight: '1.4' }}>
+              <p style={{ fontSize: '8.5px', color: customTemplate?.card_design_back ? '#475569' : '#cbd5e1', fontFamily: 'sans-serif', margin: '0', lineHeight: '1.4' }}>
                 1. Kartu ini adalah milik resmi <strong>YAYASAN KARYA BAKTI SURAKARTA</strong>. Hak penggunaan kartu hanya terbatas pada pemegang kartu yang terdaftar.
               </p>
-              <p style={{ fontSize: '8.5px', color: '#cbd5e1', fontFamily: 'sans-serif', margin: '0', lineHeight: '1.4' }}>
+              <p style={{ fontSize: '8.5px', color: customTemplate?.card_design_back ? '#475569' : '#cbd5e1', fontFamily: 'sans-serif', margin: '0', lineHeight: '1.4' }}>
                 2. Pemegang kartu wajib mentaati seluruh peraturan keamanan, tata tertib, dan kode etik Yayasan.
               </p>
-              <p style={{ fontSize: '8.5px', color: '#cbd5e1', fontFamily: 'sans-serif', margin: '0', lineHeight: '1.4' }}>
+              <p style={{ fontSize: '8.5px', color: customTemplate?.card_design_back ? '#475569' : '#cbd5e1', fontFamily: 'sans-serif', margin: '0', lineHeight: '1.4' }}>
                 3. Apabila kartu ini hilang atau ditemukan, harap segera mengembalikannya ke divisi HR / Security Yayasan Karya Bakti Surakarta.
               </p>
             </div>
@@ -647,7 +841,7 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
             {/* Expiry and QR code section */}
             <div 
               style={{ 
-                borderTop: '1px solid rgba(147, 197, 253, 0.2)', 
+                borderTop: customTemplate?.card_design_back ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid rgba(147, 197, 253, 0.2)', 
                 paddingTop: '12px', 
                 marginTop: '8px',
                 display: 'flex', 
@@ -658,17 +852,17 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexGrow: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                  <Calendar className={`w-3.5 h-3.5 ${customTemplate?.card_design_back ? 'text-indigo-600' : 'text-blue-400'}`} />
                   <div>
-                    <p style={{ fontSize: '7px', color: '#93c5fd', textTransform: 'uppercase', margin: '0', lineHeight: '1' }}>Masa Berlaku</p>
-                    <p style={{ fontSize: '9px', fontFamily: 'monospace', color: '#f8fafc', fontWeight: 'bold', margin: '2px 0 0 0' }}>SEUMUR HIDUP</p>
+                    <p style={{ fontSize: '7px', color: customTemplate?.card_design_back ? '#64748b' : '#93c5fd', textTransform: 'uppercase', margin: '0', lineHeight: '1' }}>Masa Berlaku</p>
+                    <p style={{ fontSize: '9px', fontFamily: 'monospace', color: customTemplate?.card_design_back ? '#1e293b' : '#f8fafc', fontWeight: 'bold', margin: '2px 0 0 0' }}>SEUMUR HIDUP</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <ShieldCheck className={`w-3.5 h-3.5 ${customTemplate?.card_design_back ? 'text-indigo-600' : 'text-blue-400'}`} />
                   <div>
-                    <p style={{ fontSize: '7px', color: '#93c5fd', textTransform: 'uppercase', margin: '0', lineHeight: '1' }}>Otoritas Penerbit</p>
-                    <p style={{ fontSize: '9px', fontFamily: 'monospace', color: '#f8fafc', fontWeight: 'bold', margin: '2px 0 0 0' }}>Karya Bakti Security</p>
+                    <p style={{ fontSize: '7px', color: customTemplate?.card_design_back ? '#64748b' : '#93c5fd', textTransform: 'uppercase', margin: '0', lineHeight: '1' }}>Otoritas Penerbit</p>
+                    <p style={{ fontSize: '9px', fontFamily: 'monospace', color: customTemplate?.card_design_back ? '#1e293b' : '#f8fafc', fontWeight: 'bold', margin: '2px 0 0 0' }}>Karya Bakti Security</p>
                   </div>
                 </div>
               </div>
@@ -683,26 +877,28 @@ export default function IDCardPreview({ data }: IDCardPreviewProps) {
           {/* Footer Contact Details */}
           <div 
             style={{ 
-              borderTop: '1px solid rgba(147, 197, 253, 0.2)', 
+              borderTop: customTemplate?.card_design_back ? '1px solid rgba(148, 163, 184, 0.2)' : '1px solid rgba(147, 197, 253, 0.2)', 
               paddingTop: '12px', 
               width: '100%', 
               display: 'flex', 
               flexDirection: 'column', 
               gap: '4px',
-              marginTop: '10px'
+              marginTop: '10px',
+              position: 'relative',
+              zIndex: 10
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Phone className="w-3 h-3 text-blue-400" />
-              <span style={{ fontSize: '8px', color: '#93c5fd' }}>+62-271-714855</span>
+              <Phone className={`w-3 h-3 ${customTemplate?.card_design_back ? 'text-indigo-650' : 'text-blue-400'}`} />
+              <span style={{ fontSize: '8px', color: customTemplate?.card_design_back ? '#475569' : '#93c5fd' }}>+62-271-714855</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Mail className="w-3 h-3 text-blue-400" />
-              <span style={{ fontSize: '8px', color: '#93c5fd' }}>info@yayasankaryabakti.org</span>
+              <Mail className={`w-3 h-3 ${customTemplate?.card_design_back ? 'text-indigo-650' : 'text-blue-400'}`} />
+              <span style={{ fontSize: '8px', color: customTemplate?.card_design_back ? '#475569' : '#93c5fd' }}>info@yayasankaryabakti.org</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Globe className="w-3 h-3 text-blue-400" />
-              <span style={{ fontSize: '8px', color: '#93c5fd' }}>www.yayasankaryabakti.org</span>
+              <Globe className={`w-3 h-3 ${customTemplate?.card_design_back ? 'text-indigo-650' : 'text-blue-400'}`} />
+              <span style={{ fontSize: '8px', color: customTemplate?.card_design_back ? '#475569' : '#93c5fd' }}>www.yayasankaryabakti.org</span>
             </div>
           </div>
         </div>
