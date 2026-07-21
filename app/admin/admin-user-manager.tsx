@@ -1,13 +1,15 @@
 'use client'
 
-import React, { useState, useTransition } from 'react'
+import React, { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Plus, Pencil, Trash2, X, UserPlus, Save,
   AlertTriangle, CheckCircle2, Loader2, Mail,
-  Lock, User, Building, Search, SlidersHorizontal,
-  Upload, FileImage, Folder, Eye, Trash
+  Lock, User, Users, Building, Search, SlidersHorizontal,
+  Upload, FileImage, Folder, Eye, Trash,
+  LayoutDashboard, Shield, Menu, LogOut, ShieldAlert, Move
 } from 'lucide-react'
+import { signOutAction } from '../auth-actions'
 import {
   createUserAction, updateUserAction, deleteUserAction,
   createUnitAction, updateUnitAction, deleteUnitAction
@@ -19,6 +21,7 @@ interface Unit {
   nama: string
   card_design?: string | null
   card_design_back?: string | null
+  layout_config?: any | null
 }
 
 interface UserRow {
@@ -36,6 +39,13 @@ interface UserRow {
 interface AdminUserManagerProps {
   users: UserRow[]
   units: Unit[]
+  stats: {
+    totalUsers: number
+    totalAdmins: number
+    totalIT: number
+    totalYayasan: number
+  }
+  adminUsername: string
 }
 
 // ── Helper ───────────────────────────────────────────────────────────
@@ -52,9 +62,15 @@ function getUnitId(units: any): number | null {
 }
 
 // ── Main Component ───────────────────────────────────────────────────
-export default function AdminUserManager({ users, units }: AdminUserManagerProps) {
+export default function AdminUserManager({ users, units, stats, adminUsername }: AdminUserManagerProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+
+  // Local copy of units that syncs with props but can also be updated locally after save
+  const [localUnits, setLocalUnits] = useState<Unit[]>(units)
+  useEffect(() => {
+    setLocalUnits(units)
+  }, [units])
 
   // Modal states
   const [showCreate, setShowCreate] = useState(false)
@@ -62,7 +78,8 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
 
   // Active Tab state
-  const [activeTab, setActiveTab] = useState<'users' | 'units'>('users')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'units'>('overview')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Unit Modal states
   const [showCreateUnit, setShowCreateUnit] = useState(false)
@@ -85,6 +102,197 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // Layout Configuration Modal States (supporting 2D horizontal & vertical coordinates)
+  const [modalLayout, setModalLayout] = useState({
+    jabatan_top: '26.5',
+    jabatan_left: '5',
+    nik_top: '35',
+    nik_left: '0',
+    nama_top: '86',
+    nama_left: '5',
+    photo_top: '43',
+    photo_left: '26.5',
+    photo_width: '150',
+    photo_height: '200',
+    photo_shape: 'rectangle',
+    text_color: '#000000',
+    jabatan_color: '#000000',
+    nik_color: '#000000',
+    nama_color: '#000000',
+    show_jabatan: true,
+    show_nik: true,
+    show_nama: true,
+    show_photo: true
+  })
+
+  const getLayoutObject = (unit: any) => {
+    if (!unit || !unit.layout_config) return null
+    if (typeof unit.layout_config === 'string') {
+      try {
+        return JSON.parse(unit.layout_config)
+      } catch {
+        return null
+      }
+    }
+    return unit.layout_config
+  }
+
+  useEffect(() => {
+    if (editUnit) {
+      const config = getLayoutObject(editUnit)
+      setModalLayout({
+        jabatan_top: config?.jabatan_top || '26.5',
+        jabatan_left: config?.jabatan_left || '5',
+        nik_top: config?.nik_top || '35',
+        nik_left: config?.nik_left || '0',
+        nama_top: config?.nama_top || '86',
+        nama_left: config?.nama_left || '5',
+        photo_top: config?.photo_top || '43',
+        photo_left: config?.photo_left || '26.5',
+        photo_width: config?.photo_width || '150',
+        photo_height: config?.photo_height || '200',
+        photo_shape: config?.photo_shape || 'rectangle',
+        text_color: config?.text_color || '#000000',
+        jabatan_color: config?.jabatan_color || config?.text_color || '#000000',
+        nik_color: config?.nik_color || config?.text_color || '#000000',
+        nama_color: config?.nama_color || config?.text_color || '#000000',
+        show_jabatan: config?.show_jabatan !== undefined ? !!config.show_jabatan : true,
+        show_nik: config?.show_nik !== undefined ? !!config.show_nik : true,
+        show_nama: config?.show_nama !== undefined ? !!config.show_nama : true,
+        show_photo: config?.show_photo !== undefined ? !!config.show_photo : true
+      })
+    } else {
+      setModalLayout({
+        jabatan_top: '26.5',
+        jabatan_left: '5',
+        nik_top: '35',
+        nik_left: '0',
+        nama_top: '86',
+        nama_left: '5',
+        photo_top: '43',
+        photo_left: '26.5',
+        photo_width: '150',
+        photo_height: '200',
+        photo_shape: 'rectangle',
+        text_color: '#000000',
+        jabatan_color: '#000000',
+        nik_color: '#000000',
+        nama_color: '#000000',
+        show_jabatan: true,
+        show_nik: true,
+        show_nama: true,
+        show_photo: true
+      })
+    }
+  }, [editUnit, showCreateUnit])
+
+  // Visual drag-and-drop editor states (with click offsets for smooth dragging)
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const [activeDragElement, setActiveDragElement] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+
+  const handleDragStart = (e: React.MouseEvent, element: string) => {
+    e.preventDefault()
+    if (!previewContainerRef.current) return
+    
+    const rect = previewContainerRef.current.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+
+    // Get current position in percentage
+    const curLeftPct = parseFloat((modalLayout as any)[`${element}_left`] !== undefined ? (modalLayout as any)[`${element}_left`] : '0')
+    const curTopPct = parseFloat((modalLayout as any)[`${element}_top`] !== undefined ? (modalLayout as any)[`${element}_top`] : '0')
+
+    // Convert current percentage to pixels on the canvas
+    const curLeftPx = (curLeftPct / 100) * rect.width
+    const curTopPx = (curTopPct / 100) * rect.height
+
+    setDragOffset({
+      x: mouseX - curLeftPx,
+      y: mouseY - curTopPx
+    })
+    setActiveDragElement(element)
+  }
+
+  const handleDragMove = (e: React.MouseEvent) => {
+    if (!activeDragElement || !previewContainerRef.current) return
+    
+    const rect = previewContainerRef.current.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+
+    // Calculate new position
+    const newLeftPx = mouseX - dragOffset.x
+    const newTopPx = mouseY - dragOffset.y
+
+    // Element dimensions (for clamping)
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * 0.75) : 216 // 90% of 240px
+    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * 0.75) : (activeDragElement === 'nama' ? 35 : 24)
+
+    // Clamp values (allowing half width bleed off edge for freedom)
+    const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
+    const clampedY = Math.max(-elementHeight / 2, Math.min(newTopPx, rect.height - elementHeight / 2))
+
+    const percentX = (clampedX / rect.width) * 100
+    const percentY = (clampedY / rect.height) * 100
+
+    setModalLayout(prev => ({
+      ...prev,
+      [`${activeDragElement}_left`]: percentX.toFixed(1),
+      [`${activeDragElement}_top`]: percentY.toFixed(1)
+    }))
+  }
+
+  const handleDragEnd = () => {
+    setActiveDragElement(null)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent, element: string) => {
+    if (!previewContainerRef.current || e.touches.length === 0) return
+    
+    const rect = previewContainerRef.current.getBoundingClientRect()
+    const mouseX = e.touches[0].clientX - rect.left
+    const mouseY = e.touches[0].clientY - rect.top
+
+    const curLeftPct = parseFloat((modalLayout as any)[`${element}_left`] !== undefined ? (modalLayout as any)[`${element}_left`] : '0')
+    const curTopPct = parseFloat((modalLayout as any)[`${element}_top`] !== undefined ? (modalLayout as any)[`${element}_top`] : '0')
+
+    const curLeftPx = (curLeftPct / 100) * rect.width
+    const curTopPx = (curTopPct / 100) * rect.height
+
+    setDragOffset({
+      x: mouseX - curLeftPx,
+      y: mouseY - curTopPx
+    })
+    setActiveDragElement(element)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!activeDragElement || !previewContainerRef.current || e.touches.length === 0) return
+    
+    const rect = previewContainerRef.current.getBoundingClientRect()
+    const mouseX = e.touches[0].clientX - rect.left
+    const mouseY = e.touches[0].clientY - rect.top
+
+    const newLeftPx = mouseX - dragOffset.x
+    const newTopPx = mouseY - dragOffset.y
+
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * 0.75) : 216
+    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * 0.75) : (activeDragElement === 'nama' ? 35 : 24)
+
+    const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
+    const clampedY = Math.max(-elementHeight / 2, Math.min(newTopPx, rect.height - elementHeight / 2))
+
+    const percentX = (clampedX / rect.width) * 100
+    const percentY = (clampedY / rect.height) * 100
+
+    setModalLayout(prev => ({
+      ...prev,
+      [`${activeDragElement}_left`]: percentX.toFixed(1),
+      [`${activeDragElement}_top`]: percentY.toFixed(1)
+    }))
+  }
 
   // Auto-dismiss success message
   const showSuccess = (msg: string) => {
@@ -194,6 +402,10 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
       setError(result.error)
       setLoading(false)
     } else {
+      // Update localUnits with the newly created unit
+      if (result.unit) {
+        setLocalUnits(prev => [...prev, result.unit])
+      }
       setShowCreateUnit(false)
       setFrontDesignBase64(null)
       setBackDesignBase64(null)
@@ -229,6 +441,13 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
       setError(result.error)
       setLoading(false)
     } else {
+      // Update localUnits immediately with saved layout_config so it's available on next modal open
+      if (result.unit) {
+        setLocalUnits(prev => prev.map(u => u.id === result.unit.id ? { ...u, ...result.unit } : u))
+      } else if (editUnit) {
+        // Fallback: update localUnits with the current modal layout state
+        setLocalUnits(prev => prev.map(u => u.id === editUnit.id ? { ...u, layout_config: modalLayout } : u))
+      }
       setEditUnit(null)
       setFrontDesignBase64(null)
       setBackDesignBase64(null)
@@ -250,6 +469,8 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
       setError(result.error)
       setLoading(false)
     } else {
+      // Remove from localUnits immediately
+      setLocalUnits(prev => prev.filter(u => u.id !== deleteUnitTarget.id))
       setDeleteUnitTarget(null)
       setLoading(false)
       showSuccess('Unit berhasil dihapus!')
@@ -274,13 +495,14 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
   })
 
   // Filtered units calculation
-  const filteredUnits = units.filter((unit) => {
+  const filteredUnits = localUnits.filter((unit) => {
     const searchLower = unitSearchQuery.toLowerCase().trim()
     return searchLower === '' || unit.nama.toLowerCase().includes(searchLower)
   })
 
   return (
     <>
+      <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex relative overflow-hidden font-sans">
       {/* Success Toast */}
       {success && (
         <div className="fixed top-6 right-6 z-[60] bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-right">
@@ -288,32 +510,248 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
           {success}
         </div>
       )}
-      <div className="flex gap-2 mb-6 border-b border-slate-200 pb-2.5">
-        <button
-          onClick={() => { setActiveTab('users'); setError(null) }}
-          className={`px-4 py-2 text-xs font-semibold rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'users'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10'
-              : 'text-slate-500 hover:text-slate-800 bg-white border border-slate-200/60'
-          }`}
-        >
-          <User className="w-3.5 h-3.5" />
-          Kelola User
-        </button>
-        <button
-          onClick={() => { setActiveTab('units'); setError(null) }}
-          className={`px-4 py-2 text-xs font-semibold rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'units'
-              ? 'bg-slate-900 text-white shadow-md shadow-slate-900/10'
-              : 'text-slate-500 hover:text-slate-800 bg-white border border-slate-200/60'
-          }`}
-        >
-          <Folder className="w-3.5 h-3.5" />
-          Kelola Unit & Desain
-        </button>
-      </div>
 
-      {activeTab === 'users' ? (
+      {/* ── SIDEBAR (DESKTOP & MOBILE DRAWER) ─────────────────────────────── */}
+      {/* Backdrop for mobile */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside 
+        className={`fixed top-0 bottom-0 left-0 z-40 w-[260px] bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col justify-between transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Sidebar Header */}
+        <div className="p-6 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center border border-indigo-500 shadow-lg shadow-indigo-500/30">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white leading-tight">YKBS SECURE</h1>
+              <p className="text-[10px] text-slate-400 font-mono tracking-wider">ADMIN CORE</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar Nav links */}
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+          <button
+            onClick={() => { setActiveTab('overview'); setSidebarOpen(false); setError(null) }}
+            className={`w-full px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-3 transition cursor-pointer ${
+              activeTab === 'overview'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+            }`}
+          >
+            <LayoutDashboard className="w-4.5 h-4.5" />
+            <span>Dashboard Overview</span>
+          </button>
+          
+          <button
+            onClick={() => { setActiveTab('users'); setSidebarOpen(false); setError(null) }}
+            className={`w-full px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-3 transition cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+            }`}
+          >
+            <User className="w-4.5 h-4.5" />
+            <span>Kelola User</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('units'); setSidebarOpen(false); setError(null) }}
+            className={`w-full px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-3 transition cursor-pointer ${
+              activeTab === 'units'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+            }`}
+          >
+            <Building className="w-4.5 h-4.5" />
+            <span>Kelola Unit & Desain</span>
+          </button>
+        </nav>
+
+        {/* Sidebar Footer (Profile info & Log Out) */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/30 flex flex-col gap-3">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center font-bold text-xs text-indigo-400 uppercase">
+              {adminUsername.slice(0, 2)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate leading-tight">{adminUsername}</p>
+              <p className="text-[9px] text-slate-500 font-medium">Administrator</p>
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              await signOutAction()
+              router.refresh()
+            }}
+            className="w-full px-3 py-2 border border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-800/40 text-slate-400 hover:text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN WORKSPACE CONTENT ───────────────────────────────────────── */}
+      <main className="flex-1 md:pl-[260px] min-h-screen flex flex-col justify-between overflow-x-hidden relative">
+        {/* Dynamic decorative backdrop glows */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-indigo-200/10 rounded-full filter blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-purple-200/10 rounded-full filter blur-[100px] pointer-events-none" />
+
+        {/* Header bar */}
+        <header className="sticky top-0 bg-white/70 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between z-30">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 md:hidden cursor-pointer"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 leading-tight">
+                {activeTab === 'overview' && 'Dashboard Overview'}
+                {activeTab === 'users' && 'User Management'}
+                {activeTab === 'units' && 'Unit & Design Templates'}
+              </h2>
+              <p className="text-[10px] text-slate-500 hidden sm:block">
+                Portal Pengelolaan ID Card Digital • YKBS System
+              </p>
+            </div>
+          </div>
+          
+          <div className="text-xs text-slate-500 font-semibold bg-white px-3 py-1.5 rounded-xl border border-slate-200/60 shadow-sm hidden sm:block">
+            Welcome back, <span className="text-indigo-600 font-bold">{adminUsername}</span>
+          </div>
+        </header>
+
+        {/* Content Workspace Area */}
+        <div className="p-6 md:p-8 flex-grow z-10">
+          
+          {/* ── OVERVIEW VIEW ───────────────────────────────────────────── */}
+          {activeTab === 'overview' && (
+            <div className="space-y-8 animate-in fade-in duration-200">
+              {/* Top Banner */}
+              <div className="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
+                <div className="relative z-10 max-w-xl">
+                  <h3 className="text-xl md:text-2xl font-bold mb-2">Sistem Management ID Card</h3>
+                  <p className="text-slate-300 text-xs md:text-sm leading-relaxed mb-4">
+                    Selamat datang di YKBS Secure Core. Sebagai administrator, Anda memiliki kontrol penuh untuk mendaftarkan user baru, mengelompokkan mereka ke unit bisnis, serta mengunggah/mengatur template desain kartu custom yang unik untuk setiap unit.
+                  </p>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setActiveTab('users')}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-indigo-600/30 cursor-pointer"
+                    >
+                      Kelola User
+                    </button>
+                    <button 
+                      onClick={() => setActiveTab('units')}
+                      className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+                    >
+                      Kelola Unit
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Users</span>
+                    <Users className="w-4.5 h-4.5 text-indigo-500" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{stats.totalUsers}</div>
+                  <p className="text-[10px] text-slate-400 mt-1">Terdaftar di database portal</p>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Admins</span>
+                    <Shield className="w-4.5 h-4.5 text-amber-500" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{stats.totalAdmins}</div>
+                  <p className="text-[10px] text-slate-400 mt-1">Hak akses administrator</p>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit IT</span>
+                    <Building className="w-4.5 h-4.5 text-cyan-500" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{stats.totalIT}</div>
+                  <p className="text-[10px] text-slate-400 mt-1">Anggota departemen IT</p>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm hover:shadow-md transition">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit Yayasan</span>
+                    <Building className="w-4.5 h-4.5 text-emerald-500" />
+                  </div>
+                  <div className="text-2xl font-extrabold text-slate-900">{stats.totalYayasan}</div>
+                  <p className="text-[10px] text-slate-400 mt-1">Anggota departemen Yayasan</p>
+                </div>
+              </div>
+
+              {/* Quick Info / Guidelines */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-indigo-500" />
+                    Panduan Pengelolaan User
+                  </h4>
+                  <ul className="space-y-3 text-xs text-slate-600">
+                    <li className="flex gap-2">
+                      <span className="text-indigo-500 font-bold">•</span>
+                      <span>Untuk login user biasa, validasi menggunakan <strong>Username</strong> dan <strong>Password</strong> (bukan email).</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-indigo-500 font-bold">•</span>
+                      <span>Admin dapat mengubah username user kapan saja melalui tombol edit di tab <strong>Kelola User</strong>.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-indigo-500 font-bold">•</span>
+                      <span>Setiap user baru yang ditambahkan akan dikunci temanya secara otomatis jika unitnya memiliki template desain khusus.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                  <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <Building className="w-4 h-4 text-indigo-500" />
+                    Panduan Template Kustom
+                  </h4>
+                  <ul className="space-y-3 text-xs text-slate-600">
+                    <li className="flex gap-2">
+                      <span className="text-indigo-500 font-bold">•</span>
+                      <span>Unggah desain depan & belakang kartu beresolusi 3:5 portrait di menu <strong>Kelola Unit & Desain</strong>.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-indigo-500 font-bold">•</span>
+                      <span>Desain unit kustom (seperti PT ATMI SOLO) akan merender nama, NIK, jabatan, dan foto persegi secara otomatis di area cetak template.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-indigo-500 font-bold">•</span>
+                      <span>Gunakan fitur download PDF / Gambar di portal user untuk mencetak kartu.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'users' && (
         /* Users Table */
         <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden mb-8">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -359,7 +797,7 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
                 >
                   <option value="all">Semua Unit</option>
                   <option value="Unassigned">Unassigned</option>
-                  {units.map((u) => (
+                  {localUnits.map((u) => (
                     <option key={u.id} value={u.nama}>
                       {u.nama}
                     </option>
@@ -475,7 +913,9 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
             )}
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'units' && (
         /* Units Table Card */
         <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden mb-8">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -598,6 +1038,21 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
         </div>
       )}
 
+        </div> {/* Closes Content Workspace Area */}
+        
+        {/* Footer disclaimer */}
+        <footer className="w-full border-t border-slate-200 bg-white py-4 px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left z-20">
+          <div className="text-[9px] text-slate-400 font-mono max-w-md leading-relaxed">
+            Admin Area. Segala aktivitas diotorisasi dan dicatat untuk audit internal YKBS Security.
+          </div>
+          <div className="flex items-center gap-2 text-[9px] text-slate-500 font-mono bg-white px-3 py-1 border border-slate-200 rounded-lg shadow-sm">
+            <ShieldAlert className="w-3 h-3 text-amber-500" />
+            <span>YKBS SECURE CORE</span>
+          </div>
+        </footer>
+      </main>
+    </div>
+
       {/* ── CREATE MODAL ──────────────────────────────────────────── */}
       {showCreate && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => !loading && setShowCreate(false)}>
@@ -677,7 +1132,7 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
                   <select id="create-unit" name="unit_id"
                     className="w-full pl-9 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-900 transition outline-none appearance-none cursor-pointer">
                     <option value="">— Pilih Unit —</option>
-                    {units.map(u => (
+                    {localUnits.map(u => (
                       <option key={u.id} value={u.id}>{u.nama}</option>
                     ))}
                   </select>
@@ -794,7 +1249,7 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
                   <select id="edit-unit" name="unit_id" defaultValue={getUnitId(editUser.units) || ''}
                     className="w-full pl-9 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-xs text-slate-900 transition outline-none appearance-none cursor-pointer">
                     <option value="">— Pilih Unit —</option>
-                    {units.map(u => (
+                    {localUnits.map(u => (
                       <option key={u.id} value={u.id}>{u.nama}</option>
                     ))}
                   </select>
@@ -872,7 +1327,7 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
       {/* ── CREATE UNIT MODAL ─────────────────────────────────────────── */}
       {showCreateUnit && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => !loading && setShowCreateUnit(false)}>
-          <div className="w-full max-w-md bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-3xl bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -894,8 +1349,189 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
             )}
 
             <form onSubmit={handleCreateUnit} className="space-y-4">
-              {/* Nama Unit */}
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                {/* Left Column: Visual Editor (Interactive Card) */}
+                <div className="md:col-span-5 flex flex-col items-center justify-start space-y-4 border-b md:border-b-0 md:border-r border-slate-100 pb-6 md:pb-0 md:pr-4">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Visual Editor (Drag & Drop Y-Axis)
+                  </div>
+                  
+                  {/* Interactive Card Canvas */}
+                  <div 
+                    ref={previewContainerRef}
+                    onMouseMove={handleDragMove}
+                    onMouseUp={handleDragEnd}
+                    onMouseLeave={handleDragEnd}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleDragEnd}
+                    className="w-[240px] h-[375px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
+                  >
+                    {/* Background template preview */}
+                    {frontDesignBase64 ? (
+                      <img 
+                        src={frontDesignBase64} 
+                        alt="Front Design" 
+                        className="absolute inset-0 w-full h-full object-fill pointer-events-none"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-slate-100 flex flex-col items-center justify-center text-slate-400 p-4 text-center pointer-events-none">
+                        <FileImage className="w-8 h-8 mb-1.5 opacity-60" />
+                        <span className="text-[10px] font-semibold leading-normal">Belum ada gambar template depan</span>
+                      </div>
+                    )}
+
+                    {/* Jabatan Drag Over */}
+                    {modalLayout.show_jabatan && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'jabatan')}
+                        onTouchStart={(e) => handleTouchStart(e, 'jabatan')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.jabatan_top}%`,
+                          left: `${modalLayout.jabatan_left}%`,
+                          width: '216px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 20
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 rounded transition"
+                        title="Geser Jabatan (Klik & Drag Bebas)"
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'sans-serif',
+                            fontWeight: '900',
+                            fontSize: '11px',
+                            color: modalLayout.jabatan_color,
+                            letterSpacing: '0.5px'
+                          }}
+                          className="truncate pointer-events-none"
+                        >
+                          JABATAN
+                        </span>
+                        <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* NIK Drag Over */}
+                    {modalLayout.show_nik && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'nik')}
+                        onTouchStart={(e) => handleTouchStart(e, 'nik')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.nik_top}%`,
+                          left: `${modalLayout.nik_left}%`,
+                          width: '216px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 20
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 rounded transition"
+                        title="Geser NIK (Klik & Drag Bebas)"
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'sans-serif',
+                            fontWeight: '900',
+                            fontSize: '10px',
+                            color: modalLayout.nik_color,
+                            letterSpacing: '0.5px'
+                          }}
+                          className="pointer-events-none"
+                        >
+                          123/45/67
+                        </span>
+                        <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Photo Drag Over */}
+                    {modalLayout.show_photo && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'photo')}
+                        onTouchStart={(e) => handleTouchStart(e, 'photo')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.photo_top}%`,
+                          left: `${modalLayout.photo_left}%`,
+                          width: `${Number(modalLayout.photo_width) * 0.75}px`,
+                          height: `${Number(modalLayout.photo_height) * 0.75}px`,
+                          borderRadius: modalLayout.photo_shape === 'circle' ? '50%' : (modalLayout.photo_shape === 'square' ? '8px' : '0px'),
+                          border: modalLayout.photo_shape === 'circle' ? '2px solid white' : (modalLayout.photo_shape === 'square' ? '2px solid white' : '1px dashed transparent'),
+                          boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
+                          cursor: 'move',
+                          zIndex: 20,
+                          overflow: 'hidden'
+                        }}
+                        className="group hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 transition flex items-center justify-center bg-slate-300/80"
+                        title="Geser Foto (Klik & Drag Bebas)"
+                      >
+                        <span className="text-[8px] font-bold text-slate-500 pointer-events-none">FOTO ({modalLayout.photo_width}x{modalLayout.photo_height})</span>
+                        <Move className="w-4 h-4 text-indigo-650 absolute opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Name Drag Over */}
+                    {modalLayout.show_nama && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'nama')}
+                        onTouchStart={(e) => handleTouchStart(e, 'nama')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.nama_top}%`,
+                          left: `${modalLayout.nama_left}%`,
+                          width: '216px',
+                          height: '35px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 20
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 rounded transition"
+                        title="Geser Nama (Klik & Drag Bebas)"
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'sans-serif',
+                            fontWeight: '900',
+                            fontSize: '13px',
+                            color: modalLayout.nama_color,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            lineHeight: '1.2',
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}
+                          className="truncate pointer-events-none"
+                        >
+                          NAMA KARYAWAN
+                        </span>
+                        <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-medium text-center leading-normal max-w-[220px]">
+                    💡 <strong>Tips Editor:</strong> Arahkan mouse ke Jabatan, NIK, Foto, atau Nama pada kartu di atas, lalu **klik & seret (drag & drop)** secara bebas ke segala arah!
+                  </div>
+                </div>
+
+                {/* Right Column: Controls */}
+                <div className="md:col-span-7 space-y-4">
+                  {/* Nama Unit */}
+                  <div className="space-y-1.5">
                 <label htmlFor="unit-nama" className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider block">
                   Nama Unit / Perusahaan <span className="text-red-500">*</span>
                 </label>
@@ -983,8 +1619,213 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
                 )}
               </div>
 
-              <div className="p-3 bg-slate-50 border border-slate-200/50 rounded-xl text-[9px] text-slate-500 leading-normal">
-                💡 <strong>Tips Layout:</strong> Pastikan template desain memiliki proporsi area pas foto di bagian tengah atas, agar sesuai dengan struktur cetak otomatis YKBS.
+              {/* ── KONFIGURASI TATA LETAK ─────────────────────────────────── */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 mb-2">
+                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tata Letak & Warna Teks</h4>
+                </div>
+
+                {/* Komponen Visibility Toggles */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">Tampilkan Komponen</span>
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_jabatan}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_jabatan: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Jabatan
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_nik}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_nik: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      NIK
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_nama}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_nama: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Nama
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_photo}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_photo: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Foto
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Jabatan Y & X */}
+                  {modalLayout.show_jabatan && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Jabatan Y (Tinggi: {modalLayout.jabatan_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.jabatan_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Jabatan X (Samping: {modalLayout.jabatan_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.jabatan_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* NIK Y & X */}
+                  {modalLayout.show_nik && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">NIK Y (Tinggi: {modalLayout.nik_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.nik_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">NIK X (Samping: {modalLayout.nik_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.nik_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Nama Y & X */}
+                  {modalLayout.show_nama && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Nama Y (Tinggi: {modalLayout.nama_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.nama_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Nama X (Samping: {modalLayout.nama_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.nama_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Photo Y & X */}
+                  {modalLayout.show_photo && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto Y (Tinggi: {modalLayout.photo_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.photo_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto X (Samping: {modalLayout.photo_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.photo_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Photo Shape & Size */}
+                  {modalLayout.show_photo && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Bentuk Foto</label>
+                        <select value={modalLayout.photo_shape}
+                          onChange={e => {
+                            const shape = e.target.value;
+                            setModalLayout(prev => {
+                              const updates: any = { ...prev, photo_shape: shape };
+                              if (shape === 'square' || shape === 'circle') {
+                                updates.photo_height = prev.photo_width;
+                              }
+                              return updates;
+                            });
+                          }}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                          <option value="rectangle">Persegi Panjang (3:4)</option>
+                          <option value="square">Persegi / Kotak (1:1)</option>
+                          <option value="circle">Bulat / Lingkaran</option>
+                        </select>
+                      </div>
+
+                      {modalLayout.photo_shape === 'rectangle' ? (
+                        <>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
+                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                              onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
+                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_height}
+                              onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
+                          <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                            onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Text Color Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
+                    {/* Warna Jabatan */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.jabatan_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.jabatan_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+
+                    {/* Warna NIK */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna NIK</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.nik_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.nik_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+
+                    {/* Warna Nama */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Nama</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.nama_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.nama_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <input type="hidden" name="layout_config" value={JSON.stringify(modalLayout)} />
+              </div>
+
+                </div>
               </div>
 
               {/* Actions */}
@@ -1007,7 +1848,7 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
       {/* ── EDIT UNIT MODAL ───────────────────────────────────────────── */}
       {editUnit && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => !loading && setEditUnit(null)}>
-          <div className="w-full max-w-md bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-3xl bg-white border border-slate-200 shadow-2xl rounded-2xl p-6 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -1031,8 +1872,194 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
             <form onSubmit={handleUpdateUnit} className="space-y-4">
               <input type="hidden" name="id" value={editUnit.id} />
 
-              {/* Nama Unit */}
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                {/* Left Column: Visual Editor (Interactive Card) */}
+                <div className="md:col-span-5 flex flex-col items-center justify-start space-y-4 border-b md:border-b-0 md:border-r border-slate-100 pb-6 md:pb-0 md:pr-4">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Visual Editor (Drag & Drop Y-Axis)
+                  </div>
+                  
+                  {/* Interactive Card Canvas */}
+                  <div 
+                    ref={previewContainerRef}
+                    onMouseMove={handleDragMove}
+                    onMouseUp={handleDragEnd}
+                    onMouseLeave={handleDragEnd}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleDragEnd}
+                    className="w-[240px] h-[375px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
+                  >
+                    {/* Background template preview */}
+                    {frontDesignBase64 === 'REMOVE' ? (
+                      <div className="absolute inset-0 bg-slate-100 flex flex-col items-center justify-center text-slate-400 p-4 text-center pointer-events-none">
+                        <FileImage className="w-8 h-8 mb-1.5 opacity-60" />
+                        <span className="text-[10px] font-semibold leading-normal">Menggunakan template bawaan</span>
+                      </div>
+                    ) : (frontDesignBase64 || editUnit.card_design) ? (
+                      <img 
+                        src={frontDesignBase64 || editUnit.card_design || undefined} 
+                        alt="Front Design" 
+                        className="absolute inset-0 w-full h-full object-fill pointer-events-none"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-slate-100 flex flex-col items-center justify-center text-slate-400 p-4 text-center pointer-events-none">
+                        <FileImage className="w-8 h-8 mb-1.5 opacity-60" />
+                        <span className="text-[10px] font-semibold leading-normal">Belum ada gambar template depan</span>
+                      </div>
+                    )}
+
+                    {/* Jabatan Drag Over */}
+                    {modalLayout.show_jabatan && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'jabatan')}
+                        onTouchStart={(e) => handleTouchStart(e, 'jabatan')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.jabatan_top}%`,
+                          left: `${modalLayout.jabatan_left}%`,
+                          width: '216px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 20
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 rounded transition"
+                        title="Geser Jabatan (Klik & Drag Bebas)"
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'sans-serif',
+                            fontWeight: '900',
+                            fontSize: '11px',
+                            color: modalLayout.jabatan_color,
+                            letterSpacing: '0.5px'
+                          }}
+                          className="truncate pointer-events-none"
+                        >
+                          JABATAN
+                        </span>
+                        <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* NIK Drag Over */}
+                    {modalLayout.show_nik && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'nik')}
+                        onTouchStart={(e) => handleTouchStart(e, 'nik')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.nik_top}%`,
+                          left: `${modalLayout.nik_left}%`,
+                          width: '216px',
+                          height: '18px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 20
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 rounded transition"
+                        title="Geser NIK (Klik & Drag Bebas)"
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'sans-serif',
+                            fontWeight: '900',
+                            fontSize: '10px',
+                            color: modalLayout.nik_color,
+                            letterSpacing: '0.5px'
+                          }}
+                          className="pointer-events-none"
+                        >
+                          123/45/67
+                        </span>
+                        <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Photo Drag Over */}
+                    {modalLayout.show_photo && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'photo')}
+                        onTouchStart={(e) => handleTouchStart(e, 'photo')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.photo_top}%`,
+                          left: `${modalLayout.photo_left}%`,
+                          width: `${Number(modalLayout.photo_width) * 0.75}px`,
+                          height: `${Number(modalLayout.photo_height) * 0.75}px`,
+                          borderRadius: modalLayout.photo_shape === 'circle' ? '50%' : (modalLayout.photo_shape === 'square' ? '8px' : '0px'),
+                          border: modalLayout.photo_shape === 'circle' ? '2px solid white' : (modalLayout.photo_shape === 'square' ? '2px solid white' : '1px dashed transparent'),
+                          boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
+                          cursor: 'move',
+                          zIndex: 20,
+                          overflow: 'hidden'
+                        }}
+                        className="group hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 transition flex items-center justify-center bg-slate-300/80"
+                        title="Geser Foto (Klik & Drag Bebas)"
+                      >
+                        <span className="text-[8px] font-bold text-slate-500 pointer-events-none">FOTO ({modalLayout.photo_width}x{modalLayout.photo_height})</span>
+                        <Move className="w-4 h-4 text-indigo-650 absolute opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Name Drag Over */}
+                    {modalLayout.show_nama && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'nama')}
+                        onTouchStart={(e) => handleTouchStart(e, 'nama')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.nama_top}%`,
+                          left: `${modalLayout.nama_left}%`,
+                          width: '216px',
+                          height: '35px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 20
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 rounded transition"
+                        title="Geser Nama (Klik & Drag Bebas)"
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'sans-serif',
+                            fontWeight: '900',
+                            fontSize: '13px',
+                            color: modalLayout.nama_color,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            lineHeight: '1.2',
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}
+                          className="truncate pointer-events-none"
+                        >
+                          NAMA KARYAWAN
+                        </span>
+                        <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-medium text-center leading-normal max-w-[220px]">
+                    💡 <strong>Tips Editor:</strong> Arahkan mouse ke Jabatan, NIK, Foto, atau Nama pada kartu di atas, lalu **klik & seret (drag & drop)** secara bebas ke segala arah!
+                  </div>
+                </div>
+
+                {/* Right Column: Controls */}
+                <div className="md:col-span-7 space-y-4">
+                  {/* Nama Unit */}
+                  <div className="space-y-1.5">
                 <label htmlFor="edit-unit-nama" className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider block">
                   Nama Unit / Perusahaan <span className="text-red-500">*</span>
                 </label>
@@ -1166,6 +2193,214 @@ export default function AdminUserManager({ users, units }: AdminUserManagerProps
                   </label>
                 )}
               </div>
+
+              {/* ── KONFIGURASI TATA LETAK ─────────────────────────────────── */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 mb-2">
+                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tata Letak & Warna Teks</h4>
+                </div>
+
+                {/* Komponen Visibility Toggles */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
+                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">Tampilkan Komponen</span>
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_jabatan}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_jabatan: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Jabatan
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_nik}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_nik: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      NIK
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_nama}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_nama: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Nama
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_photo}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_photo: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Foto
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3.5">
+                  {/* Jabatan Y & X */}
+                  {modalLayout.show_jabatan && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Jabatan Y (Tinggi: {modalLayout.jabatan_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.jabatan_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Jabatan X (Samping: {modalLayout.jabatan_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.jabatan_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* NIK Y & X */}
+                  {modalLayout.show_nik && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">NIK Y (Tinggi: {modalLayout.nik_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.nik_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">NIK X (Samping: {modalLayout.nik_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.nik_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Nama Y & X */}
+                  {modalLayout.show_nama && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Nama Y (Tinggi: {modalLayout.nama_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.nama_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Nama X (Samping: {modalLayout.nama_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.nama_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Photo Y & X */}
+                  {modalLayout.show_photo && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto Y (Tinggi: {modalLayout.photo_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.photo_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto X (Samping: {modalLayout.photo_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.photo_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Photo Shape & Size */}
+                  {modalLayout.show_photo && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Bentuk Foto</label>
+                        <select value={modalLayout.photo_shape}
+                          onChange={e => {
+                            const shape = e.target.value;
+                            setModalLayout(prev => {
+                              const updates: any = { ...prev, photo_shape: shape };
+                              if (shape === 'square' || shape === 'circle') {
+                                updates.photo_height = updates.photo_width = prev.photo_width;
+                              }
+                              return updates;
+                            });
+                          }}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                          <option value="rectangle">Persegi Panjang (3:4)</option>
+                          <option value="square">Persegi / Kotak (1:1)</option>
+                          <option value="circle">Bulat / Lingkaran</option>
+                        </select>
+                      </div>
+
+                      {modalLayout.photo_shape === 'rectangle' ? (
+                        <>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
+                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                              onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
+                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_height}
+                              onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-605" />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
+                          <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                            onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Text Color Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
+                    {/* Warna Jabatan */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.jabatan_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.jabatan_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+
+                    {/* Warna NIK */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna NIK</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.nik_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.nik_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+
+                    {/* Warna Nama */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Nama</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.nama_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.nama_color}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <input type="hidden" name="layout_config" value={JSON.stringify(modalLayout)} />
+              </div>
+            </div>
+          </div>
 
               {/* Actions */}
               <div className="flex justify-end gap-2.5 pt-2">

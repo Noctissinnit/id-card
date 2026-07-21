@@ -2,11 +2,11 @@ import React from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getUserAction } from './auth-actions';
-import { Shield, CreditCard, ArrowRight, Sparkles, Database, CheckCircle } from 'lucide-react';
+import { ArrowRight, Database, Cpu, Users } from 'lucide-react';
 
 export const metadata = {
-  title: 'YKBS ID Card Generator - Portal Resmi',
-  description: 'Sistem pembuatan ID Card Karyawan Yayasan Karya Bakti Surakarta secara aman, cepat, dan profesional.',
+  title: 'Unified Identity Portal',
+  description: 'Portal Cetak & Manajemen ID Card Karyawan untuk seluruh unit usaha di bawah jaringan Yayasan Karya Bakti Surakarta & PT ATMI.',
 };
 
 export default async function Home() {
@@ -31,112 +31,116 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen w-full flex flex-col justify-between bg-white text-slate-900 relative overflow-hidden font-sans">
-      {/* Decorative Top-Right Subtle Glow */}
-      <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-indigo-50/40 rounded-full filter blur-[120px] pointer-events-none" />
-      <div className="absolute -top-20 -left-20 w-[30vw] h-[30vw] bg-slate-50/60 rounded-full filter blur-[100px] pointer-events-none" />
+    <main className="min-h-screen w-full flex flex-col justify-between bg-slate-50 text-slate-900 relative overflow-hidden font-sans">
+      {/* Premium background glows & grids */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none z-0" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-200/20 rounded-full filter blur-[120px] pointer-events-none z-0" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-200/15 rounded-full filter blur-[120px] pointer-events-none z-0" />
 
-      {/* Navigation / Header */}
-      <nav className="w-full max-w-6xl mx-auto px-6 py-6 flex justify-between items-center z-10">
+      {/* Header */}
+      <header className="w-full max-w-6xl mx-auto px-6 py-6 flex justify-between items-center z-10 relative">
         <div className="flex items-center gap-3">
-          <img src="/img/images.png" alt="Logo YKBS" className="h-8 w-auto object-contain" />
+          <img src="/img/images.png" alt="Logo ATMI" className="h-10 w-auto object-contain" />
           <div className="flex flex-col">
-            <span className="text-xs font-bold tracking-wider uppercase text-slate-950 leading-none">YKBS SECURE</span>
-            <span className="text-[9px] font-medium tracking-[2px] uppercase text-slate-400 mt-0.5">Card Portal</span>
+            <span className="text-xs font-black tracking-wider uppercase text-slate-900 leading-none">ATMI SOLO</span>
+            <span className="text-[8px] font-bold tracking-[2px] uppercase text-indigo-600 mt-0.5">Identity Portal</span>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-slate-400 bg-slate-50 border border-slate-100 rounded-full px-3.5 py-1">
-          v1.0.0
+      </header>
+
+      {/* Hero & Split View */}
+      <section className="w-full max-w-6xl mx-auto px-6 py-8 md:py-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center z-10 flex-grow justify-center relative">
+        {/* Left Column: Simplistic copy */}
+        <div className="lg:col-span-7 flex flex-col items-start text-left space-y-5 max-w-lg">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-950 leading-none">
+            Sistem ID Card <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-indigo-800">
+              Grup Terpadu
+            </span>
+          </h1>
+
+          <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
+            Portal cetak kartu identitas resmi untuk seluruh unit kerja Yayasan Karya Bakti Surakarta & PT ATMI.
+          </p>
+
+          {/* Access Area */}
+          <div className="w-full pt-2 flex flex-col gap-3 items-start">
+            {!hasKeys ? (
+              <>
+                <button
+                  disabled
+                  className="inline-flex px-6 py-3 bg-slate-200 text-slate-400 border border-slate-350 font-bold rounded-xl text-[11px] tracking-wider uppercase cursor-not-allowed items-center justify-center gap-2"
+                >
+                  Masuk ke Portal
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-full max-w-md p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-left flex gap-2.5 items-start">
+                  <Database className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-[10px] font-bold text-amber-800 mb-0.5">Konfigurasi Database Dibutuhkan</h4>
+                    <p className="text-[9px] text-amber-700 leading-normal">
+                      Variabel Supabase tidak ditemukan. Silakan tambahkan file <code className="bg-amber-100/50 px-1 rounded font-mono text-[9px]">.env.local</code>.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-[11px] tracking-wider uppercase transition shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                Masuk ke Portal
+                <ArrowRight className="w-3.5 h-3.5 transition group-hover:translate-x-0.5" />
+              </Link>
+            )}
+          </div>
         </div>
-      </nav>
 
-      {/* Hero Section */}
-      <div className="w-full max-w-5xl mx-auto px-6 py-12 md:py-20 flex flex-col items-center text-center z-10 flex-grow justify-center">
-        {/* Subtle Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200/60 rounded-full mb-6">
-          <Sparkles className="w-3 h-3 text-indigo-600" />
-          <span className="text-[9px] font-semibold tracking-wider uppercase text-slate-600">Enterprise ID Generator</span>
-        </div>
+        {/* Right Column: Sleek Floating Card */}
+        <div className="lg:col-span-5 flex justify-center lg:justify-end w-full relative">
+          <div className="relative w-[260px] h-[400px] rounded-2xl bg-white border border-slate-200 p-4 shadow-xl shadow-slate-200/40 transition duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+            <div className="w-full h-full rounded-xl bg-gradient-to-b from-indigo-50/20 via-white to-slate-50/50 border border-indigo-500/5 overflow-hidden relative flex flex-col justify-between p-3.5">
+              
+              {/* Card Header */}
+              <div className="flex justify-between items-start z-10">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 rounded bg-indigo-600 flex items-center justify-center text-[8px] font-bold text-white">Y</div>
+                  <span className="text-[8px] font-bold tracking-wider text-slate-700">HOLDING ID</span>
+                </div>
+              </div>
 
-        {/* Main Heading */}
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-950 max-w-3xl leading-[1.1]">
-          Sistem Cetak ID Card <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-indigo-800">
-            Karyawan YKBS
-          </span>
-        </h1>
+              {/* Card Content */}
+              <div className="flex flex-col items-center justify-center flex-grow space-y-3 z-10">
+                <div className="w-22 aspect-[3/4] bg-slate-50 border border-slate-200 rounded-lg overflow-hidden relative flex items-center justify-center shadow-inner">
+                  <Users className="w-6 h-6 text-indigo-600/30" />
+                </div>
+                <div className="text-center space-y-0.5">
+                  <span className="text-[8px] font-bold text-indigo-600 tracking-[1.5px] uppercase">JABATAN</span>
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide">NAMA KARYAWAN</h3>
+                  <span className="text-[8px] font-mono text-slate-500">123/45/67</span>
+                </div>
+              </div>
 
-        {/* Description */}
-        <p className="text-slate-500 text-sm md:text-base max-w-xl mt-6 leading-relaxed">
-          Portal pembuatan kartu identitas resmi bagi seluruh divisi Yayasan Karya Bakti Surakarta. Cepat, terintegrasi, dan siap cetak berstandar tinggi.
-        </p>
-
-        {/* Action Button / Warning */}
-        <div className="mt-10 w-full max-w-md flex flex-col items-center">
-          {!hasKeys ? (
-            <div className="w-full p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-left flex gap-3.5 items-start">
-              <Database className="w-4.5 h-4.5 text-slate-400 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 mb-0.5">Konfigurasi Database Dibutuhkan</h4>
-                <p className="text-[11px] text-slate-500 leading-normal">
-                  Variabel Supabase tidak ditemukan. Silakan tambahkan file <code className="bg-slate-200/50 px-1 rounded font-mono text-[10px]">.env.local</code> di folder utama proyek Anda.
-                </p>
+              {/* Card Footer */}
+              <div className="border-t border-slate-200 pt-2 flex flex-col items-center gap-1 z-10">
+                <div className="w-full h-3.5 opacity-20 bg-[repeating-linear-gradient(90deg,#475569,#475569_1.5px,transparent_1.5px,transparent_4.5px)]" />
               </div>
             </div>
-          ) : (
-            <Link
-              href="/login"
-              className="w-full sm:w-auto px-7 py-3 bg-slate-950 hover:bg-slate-900 text-white font-medium rounded-xl text-xs tracking-wider uppercase transition shadow-sm hover:shadow flex items-center justify-center gap-2 group cursor-pointer"
-            >
-              Sign In ke Portal
-              <ArrowRight className="w-3.5 h-3.5 transition group-hover:translate-x-1" />
-            </Link>
-          )}
-        </div>
-
-        {/* Minimal Features Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl w-full mt-20 pt-10 border-t border-slate-100">
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
-              <CheckCircle className="w-4 h-4 text-indigo-650" />
-            </div>
-            <h4 className="text-xs font-bold text-slate-950 uppercase tracking-wider">Templat Resmi</h4>
-            <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5">
-              Layout kartu yang otomatis terformat presisi berdasarkan divisi dan unit kerja internal.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
-              <Sparkles className="w-4 h-4 text-indigo-650" />
-            </div>
-            <h4 className="text-xs font-bold text-slate-950 uppercase tracking-wider">Hapus Latar AI</h4>
-            <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5">
-              Unggah pas foto apa saja dan biarkan AI memotong background secara transparan secara instan.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center mb-3">
-              <Shield className="w-4 h-4 text-indigo-650" />
-            </div>
-            <h4 className="text-xs font-bold text-slate-950 uppercase tracking-wider">Keamanan Data</h4>
-            <p className="text-[11px] text-slate-500 leading-relaxed mt-1.5">
-              Setiap ID Card diverifikasi langsung melalui akun resmi unit kerja bersangkutan.
-            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Minimal Footer */}
-      <footer className="w-full max-w-6xl mx-auto px-6 py-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 z-10">
-        <div className="text-[10px] text-slate-400 font-mono text-center sm:text-left">
-          &copy; {new Date().getFullYear()} Yayasan Karya Bakti Surakarta. Hak Cipta Dilindungi.
+      {/* Footer */}
+      <footer className="w-full max-w-6xl mx-auto px-6 py-5 border-t border-slate-200 flex items-center justify-between z-10 relative">
+        <div className="text-[9px] text-slate-400 font-mono">
+          &copy; {new Date().getFullYear()} Unified Identity Platform.
         </div>
-        <div className="text-[9px] font-mono text-slate-500 bg-slate-50 border border-slate-150 px-3 py-1 rounded-full uppercase tracking-wider">
-          Internal Network Only
+        <div className="text-[8px] font-mono text-indigo-750 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-full uppercase tracking-wider">
+          Secured
         </div>
       </footer>
     </main>
   );
 }
+
+

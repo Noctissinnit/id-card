@@ -6,6 +6,8 @@ import { Shield, Users, CreditCard, Building, ShieldAlert, LogOut } from 'lucide
 import { getUnitsAction } from './admin-actions'
 import AdminUserManager from './admin-user-manager'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'YKBS Labs ID Card Generator - Admin Dashboard',
   description: 'Manage users, units, and roles for the ID Card Portal.',
@@ -99,84 +101,16 @@ export default async function AdminDashboardPage() {
   const totalYayasan = usersList.filter((u: any) => getUnitName(u.units) === 'Yayasan').length
 
   return (
-    <main className="min-h-screen w-full flex flex-col justify-between bg-slate-50 text-slate-900 relative overflow-hidden bg-grid-pattern py-10 px-4 md:px-8">
-      {/* Background radial glows */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-200/20 rounded-full filter blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-200/20 rounded-full filter blur-[100px] pointer-events-none" />
-
-      <div className="w-full max-w-5xl mx-auto z-10 flex-grow">
-        {/* Header Section */}
-        <header className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 border-b border-slate-200/80 pb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center border border-indigo-500 shadow-lg shadow-indigo-100">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 leading-tight">Admin Dashboard</h1>
-              <p className="text-xs text-slate-500">Welcome back, {user.detail?.username || (user.email && user.email.endsWith('@idcard.local') ? user.email.split('@')[0] : (user.name || 'Administrator'))}</p>
-            </div>
-          </div>
-
-          <form action={handleSignOut}>
-            <button
-              type="submit"
-              className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-2 shadow-sm"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign Out
-            </button>
-          </form>
-        </header>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Users</span>
-              <Users className="w-4.5 h-4.5 text-indigo-500" />
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{totalUsers}</div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Admins</span>
-              <Shield className="w-4.5 h-4.5 text-amber-500" />
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{totalAdmins}</div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit IT</span>
-              <Building className="w-4.5 h-4.5 text-cyan-500" />
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{totalIT}</div>
-          </div>
-
-          <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unit Yayasan</span>
-              <Building className="w-4.5 h-4.5 text-emerald-500" />
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{totalYayasan}</div>
-          </div>
-        </div>
-
-        {/* User Management — delegated to client component */}
-        <AdminUserManager users={usersList} units={units} />
-      </div>
-
-      {/* Footer disclaimer */}
-      <footer className="w-full max-w-5xl mx-auto border-t border-slate-200 pt-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-        <div className="text-[9px] text-slate-400 font-mono max-w-md leading-relaxed">
-          Admin Area. Segala aktivitas diotorisasi dan dicatat untuk audit internal YKBS Security.
-        </div>
-        <div className="flex items-center gap-2 text-[9px] text-slate-500 font-mono bg-white px-3 py-1 border border-slate-200 rounded-lg shadow-sm">
-          <ShieldAlert className="w-3 h-3 text-amber-500" />
-          <span>YKBS SECURE CORE</span>
-        </div>
-      </footer>
-    </main>
+    <AdminUserManager 
+      users={usersList} 
+      units={units} 
+      stats={{
+        totalUsers,
+        totalAdmins,
+        totalIT,
+        totalYayasan
+      }}
+      adminUsername={user.detail?.username || (user.email && user.email.endsWith('@idcard.local') ? user.email.split('@')[0] : (user.name || 'Admin'))}
+    />
   )
 }

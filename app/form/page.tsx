@@ -6,6 +6,8 @@ import IDCardForm from '../id-card-form'
 import IDCardPreview from '../id-card-preview'
 import { ShieldAlert, CreditCard, LogOut, User, Building } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = {
   title: 'YKBS Labs ID Card Generator - Form',
   description: 'Generate and print high-quality professional ID cards for your unit.',

@@ -114,33 +114,60 @@ export async function getUserAction() {
     return { user: null }
   }
 
-  // Get user details and join with units (including custom template fields)
-  let { data: detail, error: dbError } = await supabase
-    .from('user_details')
-    .select('id, user_id, unit_id, role, username, units ( id, nama, card_design, card_design_back )')
-    .eq('user_id', user.id)
-    .single()
+  // Get user details and join with units (including custom template and layout_config fields)
+  let detail: any = null;
+  let dbError: any = null;
+
+  try {
+    const { data, error } = await supabase
+      .from('user_details')
+      .select('id, user_id, unit_id, role, username, units ( id, nama, card_design, card_design_back, layout_config )')
+      .eq('user_id', user.id)
+      .single()
+    detail = data
+    dbError = error
+  } catch (err) {
+    dbError = err
+  }
 
   if (dbError) {
-    // Fallback 1: Column card_design on units table might not exist yet. Keep username select.
-    const { data: fb1Data, error: fb1Error } = await supabase
+    // Fallback 1: Column layout_config might not exist. Select card_design and card_design_back.
+    const { data: fb0Data, error: fb0Error } = await supabase
       .from('user_details')
-      .select('id, user_id, unit_id, role, username, units ( id, nama )')
+      .select('id, user_id, unit_id, role, username, units ( id, nama, card_design, card_design_back )')
       .eq('user_id', user.id)
       .single()
 
-    if (!fb1Error && fb1Data) {
-      const mappedUnits = Array.isArray(fb1Data.units)
-        ? fb1Data.units.map(u => ({ ...u, card_design: null, card_design_back: null }))
-        : fb1Data.units
-          ? { ...(fb1Data.units as any), card_design: null, card_design_back: null }
+    if (!fb0Error && fb0Data) {
+      const mappedUnits = Array.isArray(fb0Data.units)
+        ? fb0Data.units.map(u => ({ ...u, layout_config: null }))
+        : fb0Data.units
+          ? { ...(fb0Data.units as any), layout_config: null }
           : null
-
       detail = {
-        ...fb1Data,
+        ...fb0Data,
         units: mappedUnits
       } as any
     } else {
+      // Fallback 2: Column card_design on units table might not exist yet. Keep username select.
+      const { data: fb1Data, error: fb1Error } = await supabase
+        .from('user_details')
+        .select('id, user_id, unit_id, role, username, units ( id, nama )')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!fb1Error && fb1Data) {
+        const mappedUnits = Array.isArray(fb1Data.units)
+          ? fb1Data.units.map(u => ({ ...u, card_design: null, card_design_back: null, layout_config: null }))
+          : fb1Data.units
+            ? { ...(fb1Data.units as any), card_design: null, card_design_back: null, layout_config: null }
+            : null
+
+        detail = {
+          ...fb1Data,
+          units: mappedUnits
+        } as any
+      } else {
       // Fallback 2: Both card_design on units and username on user_details might not exist yet.
       const { data: fb2Data } = await supabase
         .from('user_details')
@@ -163,6 +190,7 @@ export async function getUserAction() {
       }
     }
   }
+}
 
   return {
     user: {

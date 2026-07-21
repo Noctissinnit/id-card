@@ -23,26 +23,42 @@ async function requireAdmin() {
 // ── Get all units (for dropdown & management) ─────────────────────────
 export async function getUnitsAction() {
   const supabase = await createClient()
+  
+  // Try querying with layout_config first
   let { data, error } = await supabase
     .from('units')
-    .select('id, nama, card_design, card_design_back')
+    .select('id, nama, card_design, card_design_back, layout_config')
     .order('nama')
 
   if (error) {
-    // If the columns don't exist yet, fall back to basic query
-    const { data: fallbackData, error: fallbackError } = await supabase
+    // Fallback 1: layout_config might not exist yet
+    const { data: fbData, error: fbError } = await supabase
       .from('units')
-      .select('id, nama')
+      .select('id, nama, card_design, card_design_back')
       .order('nama')
 
-    if (fallbackError) {
-      return { error: fallbackError.message, units: [] }
+    if (fbError) {
+      // Fallback 2: card_design / card_design_back might not exist yet
+      const { data: basicData, error: basicError } = await supabase
+        .from('units')
+        .select('id, nama')
+        .order('nama')
+
+      if (basicError) {
+        return { error: basicError.message, units: [] }
+      }
+      data = basicData.map(u => ({
+        ...u,
+        card_design: null,
+        card_design_back: null,
+        layout_config: null
+      })) as any
+    } else {
+      data = fbData.map(u => ({
+        ...u,
+        layout_config: null
+      })) as any
     }
-    data = fallbackData.map(u => ({
-      ...u,
-      card_design: null,
-      card_design_back: null
-    })) as any
   }
   return { units: data || [] }
 }
@@ -299,6 +315,7 @@ export async function createUnitAction(formData: FormData) {
     const nama = formData.get('nama') as string
     const cardDesign = formData.get('card_design') as string // base64 string
     const cardDesignBack = formData.get('card_design_back') as string // base64 string
+    const layoutConfig = formData.get('layout_config') as string // JSON string
 
     if (!nama || nama.trim() === '') {
       return { error: 'Nama unit wajib diisi.' }
@@ -306,14 +323,38 @@ export async function createUnitAction(formData: FormData) {
 
     const admin = createAdminClient()
 
-    const { data, error } = await admin
+    let data, error;
+    
+    // Try to insert with layout_config first
+    const { data: tryData, error: tryError } = await admin
       .from('units')
       .insert({
         nama: nama.trim(),
         card_design: cardDesign || null,
-        card_design_back: cardDesignBack || null
+        card_design_back: cardDesignBack || null,
+        layout_config: layoutConfig ? JSON.parse(layoutConfig) : null
       })
       .select()
+
+    if (tryError) {
+      if (tryError.message.includes('column') && tryError.message.includes('layout_config')) {
+        // Fallback: retry without layout_config
+        const { data: retryData, error: retryError } = await admin
+          .from('units')
+          .insert({
+            nama: nama.trim(),
+            card_design: cardDesign || null,
+            card_design_back: cardDesignBack || null
+          })
+          .select()
+        data = retryData
+        error = retryError
+      } else {
+        error = tryError
+      }
+    } else {
+      data = tryData
+    }
 
     if (error) {
       return { error: error.message }
@@ -335,6 +376,7 @@ export async function updateUnitAction(formData: FormData) {
     const nama = formData.get('nama') as string
     const cardDesign = formData.get('card_design') as string // base64 string or "REMOVE" or empty
     const cardDesignBack = formData.get('card_design_back') as string // base64 string or "REMOVE" or empty
+    const layoutConfig = formData.get('layout_config') as string // JSON string or empty
 
     if (!unitId) {
       return { error: 'ID unit tidak valid.' }
@@ -355,12 +397,38 @@ export async function updateUnitAction(formData: FormData) {
     if (cardDesignBack !== null && cardDesignBack !== undefined) {
       updatePayload.card_design_back = cardDesignBack === 'REMOVE' ? null : (cardDesignBack || null)
     }
+    if (layoutConfig !== null && layoutConfig !== undefined) {
+      updatePayload.layout_config = layoutConfig === 'REMOVE' ? null : (layoutConfig ? JSON.parse(layoutConfig) : null)
+    }
 
-    const { data, error } = await admin
+    let data, error;
+    
+    // Try to update with layout_config
+    const { data: tryData, error: tryError } = await admin
       .from('units')
       .update(updatePayload)
       .eq('id', unitId)
       .select()
+
+    if (tryError) {
+      if (tryError.message.includes('column') && tryError.message.includes('layout_config')) {
+        // Fallback: clean payload and retry without layout_config
+        const cleanPayload = { ...updatePayload }
+        delete cleanPayload.layout_config
+        
+        const { data: retryData, error: retryError } = await admin
+          .from('units')
+          .update(cleanPayload)
+          .eq('id', unitId)
+          .select()
+        data = retryData
+        error = retryError
+      } else {
+        error = tryError
+      }
+    } else {
+      data = tryData
+    }
 
     if (error) {
       return { error: error.message }

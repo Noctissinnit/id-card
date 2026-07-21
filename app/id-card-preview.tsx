@@ -257,6 +257,7 @@ interface IDCardPreviewProps {
     nama: string;
     card_design?: string | null;
     card_design_back?: string | null;
+    layout_config?: string | any | null;
   } | null;
 }
 
@@ -367,6 +368,59 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   // ID Card Front Template
   const CardFront = ({ isExport = false }: { isExport?: boolean }) => {
     if (customTemplate?.card_design) {
+      // Parse custom layout configuration
+      let config: any = null
+      if (customTemplate.layout_config) {
+        if (typeof customTemplate.layout_config === 'string') {
+          try {
+            config = JSON.parse(customTemplate.layout_config)
+          } catch {
+            // ignore
+          }
+        } else {
+          config = customTemplate.layout_config
+        }
+      }
+
+      // Scale factor: CardFront (320×500) / Editor (240×375) = 1.333
+      const SCALE = 320 / 240
+
+      // Positions & Dimensions mapping with defaults (percentages scale naturally)
+      const posJabatan = config?.jabatan_top !== undefined ? `${config.jabatan_top}%` : '26.5%'
+      const posJabatanLeft = config?.jabatan_left !== undefined ? `${config.jabatan_left}%` : '5%'
+      const posNik = config?.nik_top !== undefined ? `${config.nik_top}%` : '35%'
+      const posNikLeft = config?.nik_left !== undefined ? `${config.nik_left}%` : '5%'
+      const posNama = config?.nama_top !== undefined ? `${config.nama_top}%` : '86%'
+      const posNamaLeft = config?.nama_left !== undefined ? `${config.nama_left}%` : '5%'
+      const posPhoto = config?.photo_top !== undefined ? `${config.photo_top}%` : '43%'
+      const posPhotoLeft = config?.photo_left !== undefined ? `${config.photo_left}%` : '26.5%'
+
+      // Photo: editor renders at 0.75× stored value, so actual = stored value (which is editor * 1.333)
+      const photoRawW = config?.photo_width !== undefined ? Number(config.photo_width) : 150
+      const photoRawH = config?.photo_height !== undefined ? Number(config.photo_height) : 200
+      const photoW = `${photoRawW}px`
+      const photoH = `${photoRawH}px`
+      const photoShape = config?.photo_shape || 'rectangle'
+      const textColor = config?.text_color || '#000000'
+
+      // Visibility switches
+      const showJabatan = config?.show_jabatan !== undefined ? !!config.show_jabatan : true
+      const showNik = config?.show_nik !== undefined ? !!config.show_nik : true
+      const showNama = config?.show_nama !== undefined ? !!config.show_nama : true
+      const showPhoto = config?.show_photo !== undefined ? !!config.show_photo : true
+
+      // Colors mapping
+      const jabatanColor = config?.jabatan_color || textColor
+      const nikColor = config?.nik_color || textColor
+      const namaColor = config?.nama_color || textColor
+
+      // Scaled element dimensions (editor pixels × SCALE)
+      // Editor: text width=216, jabatan h=24, nik h=18, nama h=35
+      const textWidth = Math.round(216 * SCALE)   // 288
+      const jabatanH = Math.round(24 * SCALE)      // 32
+      const nikH = Math.round(18 * SCALE)           // 24
+      const namaH = Math.round(35 * SCALE)          // 47
+
       return (
         <div 
           className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none bg-white"
@@ -392,142 +446,152 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             }}
           />
 
-          {/* Division (WF_GDG) -> Now replaced with Jabatan */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '25%',
-              left: '5%',
-              width: '90%',
-              height: '35px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              zIndex: 10
-            }}
-          >
-            <span
+          {/* Jabatan */}
+          {showJabatan && (
+            <div
               style={{
-                fontFamily: 'sans-serif',
-                fontWeight: '900',
-                fontSize: 
-                  (data.jabatan || '').length > 25 ? '11px' :
-                  (data.jabatan || '').length > 18 ? '13px' :
-                  (data.jabatan || '').length > 12 ? '15px' : '18px',
-                color: '#000000',
-                letterSpacing: '0.5px',
-                lineHeight: '1.2',
+                position: 'absolute',
+                top: posJabatan,
+                left: posJabatanLeft,
+                width: `${textWidth}px`,
+                height: `${jabatanH}px`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 textAlign: 'center',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical'
+                zIndex: 10
               }}
             >
-              {data.jabatan || 'JABATAN'}
-            </span>
-          </div>
+              <span
+                style={{
+                  fontFamily: 'sans-serif',
+                  fontWeight: '900',
+                  fontSize: 
+                    (data.jabatan || '').length > 25 ? `${Math.round(11 * SCALE)}px` :
+                    (data.jabatan || '').length > 18 ? `${Math.round(13 * SCALE)}px` :
+                    (data.jabatan || '').length > 12 ? `${Math.round(11 * SCALE)}px` : `${Math.round(11 * SCALE)}px`,
+                  color: jabatanColor,
+                  letterSpacing: '0.5px',
+                  lineHeight: '1.2',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical'
+                }}
+              >
+                {data.jabatan || 'JABATAN'}
+              </span>
+            </div>
+          )}
 
-          {/* NIK (690/03/05) */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '35%',
-              left: 0,
-              width: '100%',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              zIndex: 10
-            }}
-          >
-            <span
+          {/* NIK */}
+          {showNik && (
+            <div
               style={{
-                fontFamily: 'sans-serif',
-                fontWeight: '900',
-                fontSize: (data.nik || '').length > 15 ? '13px' : '15px',
-                color: '#000000',
-                letterSpacing: '0.5px'
-              }}
-            >
-              {data.nik || '690/03/05'}
-            </span>
-          </div>
-
-          {/* Photo Container (Rectangular - sized to fit template's pre-printed box perfectly) */}
-          <div 
-            style={{
-              position: 'absolute',
-              top: '43%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '150px',
-              height: '200px',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: photoUrl ? 'transparent' : '#e4e4e7',
-              boxSizing: 'border-box',
-              zIndex: 10
-            }}
-          >
-            {photoUrl ? (
-              <img 
-                src={photoUrl} 
-                alt="Profile Photo" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#71717a' }}>
-                <User className="w-10 h-10" />
-                <span style={{ fontSize: '9px', fontFamily: 'sans-serif' }}>NO PHOTO</span>
-              </div>
-            )}
-          </div>
-
-          {/* Name (IKA) */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '84%',
-              left: '5%',
-              width: '90%',
-              height: '52px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              zIndex: 10
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'sans-serif',
-                fontWeight: '900',
-                fontSize: 
-                  (data.nama || '').length > 25 ? '12px' :
-                  (data.nama || '').length > 20 ? '14px' :
-                  (data.nama || '').length > 15 ? '17px' : '21px',
-                color: '#000000',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                lineHeight: '1.2',
+                position: 'absolute',
+                top: posNik,
+                left: posNikLeft,
+                width: `${textWidth}px`,
+                height: `${nikH}px`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 textAlign: 'center',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical'
+                zIndex: 10
               }}
             >
-              {data.nama || 'IKA'}
-            </span>
-          </div>
+              <span
+                style={{
+                  fontFamily: 'sans-serif',
+                  fontWeight: '900',
+                  fontSize: `${Math.round(10 * SCALE)}px`,
+                  color: nikColor,
+                  letterSpacing: '0.5px'
+                }}
+              >
+                {data.nik || '690/03/05'}
+              </span>
+            </div>
+          )}
+
+          {/* Photo Container */}
+          {showPhoto && (
+            <div 
+              style={{
+                position: 'absolute',
+                top: posPhoto,
+                left: posPhotoLeft,
+                width: photoW,
+                height: photoH,
+                borderRadius: photoShape === 'circle' ? '50%' : (photoShape === 'square' ? '8px' : '0px'),
+                border: photoShape === 'circle' ? '3px solid white' : (photoShape === 'square' ? '3px solid white' : 'none'),
+                boxShadow: photoShape === 'circle' ? '0 4px 10px rgba(0,0,0,0.15)' : (photoShape === 'square' ? '0 4px 10px rgba(0,0,0,0.15)' : 'none'),
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: photoUrl ? 'transparent' : '#e4e4e7',
+                boxSizing: 'border-box',
+                zIndex: 10
+              }}
+            >
+              {photoUrl ? (
+                <img 
+                  src={photoUrl} 
+                  alt="Profile Photo" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#71717a' }}>
+                  <User className="w-10 h-10" />
+                  <span style={{ fontSize: '9px', fontFamily: 'sans-serif' }}>NO PHOTO</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Name */}
+          {showNama && (
+            <div
+              style={{
+                position: 'absolute',
+                top: posNama,
+                left: posNamaLeft,
+                width: `${textWidth}px`,
+                height: `${namaH}px`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                zIndex: 10
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'sans-serif',
+                  fontWeight: '900',
+                  fontSize: 
+                    (data.nama || '').length > 25 ? `${Math.round(10 * SCALE)}px` :
+                    (data.nama || '').length > 20 ? `${Math.round(11 * SCALE)}px` :
+                    (data.nama || '').length > 15 ? `${Math.round(12 * SCALE)}px` : `${Math.round(13 * SCALE)}px`,
+                  color: namaColor,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  lineHeight: '1.2',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical'
+                }}
+              >
+                {data.nama || 'IKA'}
+              </span>
+            </div>
+          )}
         </div>
       );
     }
