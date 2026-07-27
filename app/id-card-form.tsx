@@ -44,7 +44,11 @@ const resizeImage = (base64Str: string, maxWidth = 800, maxHeight = 800): Promis
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
+        if (base64Str.startsWith('data:image/png')) {
+          resolve(canvas.toDataURL('image/png'));
+        } else {
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        }
       } else {
         resolve(base64Str);
       }
@@ -107,6 +111,7 @@ interface IDCardFormProps {
     nama: string;
     card_design?: string | null;
     card_design_back?: string | null;
+    layout_config?: any;
   } | null;
 }
 
@@ -493,6 +498,7 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
       {rawImageSrc && (
         <IDCardCropper
           imageSrc={rawImageSrc}
+          defaultBgColor={customTemplate?.layout_config?.photo_bg_color || '#1b365d'}
           onCropComplete={(croppedBase64) => {
             setPhotoBase64(croppedBase64);
             setPhotoPreview(croppedBase64);

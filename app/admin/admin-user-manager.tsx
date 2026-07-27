@@ -104,11 +104,41 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
   const [loading, setLoading] = useState(false)
 
   // Layout Configuration Modal States (supporting 2D horizontal & vertical coordinates)
-  const [modalLayout, setModalLayout] = useState({
+  const [modalLayout, setModalLayout] = useState<{
+    jabatan_top: string;
+    jabatan_left: string;
+    nik_top: string;
+    nik_left: string;
+    nama_top: string;
+    nama_left: string;
+    photo_top: string;
+    photo_left: string;
+    photo_width: string;
+    photo_height: string;
+    photo_shape: string;
+    text_color: string;
+    jabatan_color: string;
+    nik_color: string;
+    nama_color: string;
+    jabatan_align: 'center' | 'left' | 'right';
+    nik_align: 'center' | 'left' | 'right';
+    nama_align: 'center' | 'left' | 'right';
+    photo_bg_color: string;
+    show_jabatan: boolean;
+    show_nik: boolean;
+    show_nama: boolean;
+    show_photo: boolean;
+    jabatan_size?: string;
+    jabatan_weight?: string;
+    nik_size?: string;
+    nik_weight?: string;
+    nama_size?: string;
+    nama_weight?: string;
+  }>({
     jabatan_top: '26.5',
     jabatan_left: '5',
     nik_top: '35',
-    nik_left: '0',
+    nik_left: '5',
     nama_top: '86',
     nama_left: '5',
     photo_top: '43',
@@ -116,14 +146,24 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     photo_width: '150',
     photo_height: '200',
     photo_shape: 'rectangle',
-    text_color: '#000000',
-    jabatan_color: '#000000',
-    nik_color: '#000000',
-    nama_color: '#000000',
+    text_color: '#ffffff',
+    jabatan_color: '#facc15',
+    nik_color: '#ffffff',
+    nama_color: '#ffffff',
+    jabatan_align: 'center',
+    nik_align: 'center',
+    nama_align: 'center',
+    photo_bg_color: '#1b365d',
     show_jabatan: true,
     show_nik: true,
     show_nama: true,
-    show_photo: true
+    show_photo: true,
+    jabatan_size: '11',
+    jabatan_weight: '900',
+    nik_size: '10',
+    nik_weight: '400',
+    nama_size: '13',
+    nama_weight: '700'
   })
 
   const getLayoutObject = (unit: any) => {
@@ -138,6 +178,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     return unit.layout_config
   }
 
+  const isDarkOrUnset = (c?: string) => !c || c === '#000000' || c === '#a38f38' || c === '#857025'
+
   useEffect(() => {
     if (editUnit) {
       const config = getLayoutObject(editUnit)
@@ -145,7 +187,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         jabatan_top: config?.jabatan_top || '26.5',
         jabatan_left: config?.jabatan_left || '5',
         nik_top: config?.nik_top || '35',
-        nik_left: config?.nik_left || '0',
+        nik_left: (config?.nik_left && String(config.nik_left) !== '0') ? String(config.nik_left) : '5',
         nama_top: config?.nama_top || '86',
         nama_left: config?.nama_left || '5',
         photo_top: config?.photo_top || '43',
@@ -153,21 +195,31 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         photo_width: config?.photo_width || '150',
         photo_height: config?.photo_height || '200',
         photo_shape: config?.photo_shape || 'rectangle',
-        text_color: config?.text_color || '#000000',
-        jabatan_color: config?.jabatan_color || config?.text_color || '#000000',
-        nik_color: config?.nik_color || config?.text_color || '#000000',
-        nama_color: config?.nama_color || config?.text_color || '#000000',
+        text_color: config?.text_color ? config.text_color : '#ffffff',
+        jabatan_color: config?.jabatan_color ? config.jabatan_color : '#facc15',
+        nik_color: config?.nik_color ? config.nik_color : '#ffffff',
+        nama_color: config?.nama_color ? config.nama_color : '#ffffff',
+        jabatan_align: config?.jabatan_align || 'center',
+        nik_align: config?.nik_align || 'center',
+        nama_align: config?.nama_align || 'center',
+        photo_bg_color: config?.photo_bg_color || '#1b365d',
         show_jabatan: config?.show_jabatan !== undefined ? !!config.show_jabatan : true,
         show_nik: config?.show_nik !== undefined ? !!config.show_nik : true,
         show_nama: config?.show_nama !== undefined ? !!config.show_nama : true,
-        show_photo: config?.show_photo !== undefined ? !!config.show_photo : true
+        show_photo: config?.show_photo !== undefined ? !!config.show_photo : true,
+        jabatan_size: config?.jabatan_size || '11',
+        jabatan_weight: config?.jabatan_weight || '900',
+        nik_size: config?.nik_size || '10',
+        nik_weight: config?.nik_weight || '400',
+        nama_size: config?.nama_size || '13',
+        nama_weight: config?.nama_weight || '700'
       })
     } else {
       setModalLayout({
         jabatan_top: '26.5',
         jabatan_left: '5',
         nik_top: '35',
-        nik_left: '0',
+        nik_left: '5',
         nama_top: '86',
         nama_left: '5',
         photo_top: '43',
@@ -175,14 +227,24 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         photo_width: '150',
         photo_height: '200',
         photo_shape: 'rectangle',
-        text_color: '#000000',
-        jabatan_color: '#000000',
-        nik_color: '#000000',
-        nama_color: '#000000',
+        text_color: '#ffffff',
+        jabatan_color: '#facc15',
+        nik_color: '#ffffff',
+        nama_color: '#ffffff',
+        jabatan_align: 'center',
+        nik_align: 'center',
+        nama_align: 'center',
+        photo_bg_color: '#1b365d',
         show_jabatan: true,
         show_nik: true,
         show_nama: true,
-        show_photo: true
+        show_photo: true,
+        jabatan_size: '11',
+        jabatan_weight: '900',
+        nik_size: '10',
+        nik_weight: '400',
+        nama_size: '13',
+        nama_weight: '700'
       })
     }
   }, [editUnit, showCreateUnit])
@@ -237,9 +299,14 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const percentX = (clampedX / rect.width) * 100
     const percentY = (clampedY / rect.height) * 100
 
+    let finalLeft = percentX.toFixed(1)
+    if (activeDragElement !== 'photo' && Math.abs(percentX - 5) < 3.5) {
+      finalLeft = '5'
+    }
+
     setModalLayout(prev => ({
       ...prev,
-      [`${activeDragElement}_left`]: percentX.toFixed(1),
+      [`${activeDragElement}_left`]: finalLeft,
       [`${activeDragElement}_top`]: percentY.toFixed(1)
     }))
   }
@@ -422,6 +489,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
+    formData.set('layout_config', JSON.stringify(modalLayout))
     
     if (frontDesignBase64) {
       formData.append('card_design', frontDesignBase64)
@@ -1394,7 +1462,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           height: '24px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: modalLayout.jabatan_align === 'left' ? 'flex-start' : (modalLayout.jabatan_align === 'right' ? 'flex-end' : 'center'),
                           cursor: 'move',
                           zIndex: 20
                         }}
@@ -1404,10 +1472,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <span
                           style={{
                             fontFamily: 'sans-serif',
-                            fontWeight: '900',
-                            fontSize: '11px',
+                            fontWeight: modalLayout.jabatan_weight || '900',
+                            fontSize: `${modalLayout.jabatan_size || '11'}px`,
                             color: modalLayout.jabatan_color,
-                            letterSpacing: '0.5px'
+                            letterSpacing: '0.5px',
+                            textAlign: modalLayout.jabatan_align || 'center'
                           }}
                           className="truncate pointer-events-none"
                         >
@@ -1430,7 +1499,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           height: '18px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: modalLayout.nik_align === 'left' ? 'flex-start' : (modalLayout.nik_align === 'right' ? 'flex-end' : 'center'),
                           cursor: 'move',
                           zIndex: 20
                         }}
@@ -1439,15 +1508,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: 'sans-serif',
-                            fontWeight: '900',
-                            fontSize: '10px',
+                            fontFamily: "'Lato', sans-serif",
+                            fontWeight: modalLayout.nik_weight || '400',
+                            fontSize: `${modalLayout.nik_size || '10'}px`,
                             color: modalLayout.nik_color,
-                            letterSpacing: '0.5px'
+                            letterSpacing: '0.5px',
+                            textAlign: modalLayout.nik_align || 'center'
                           }}
                           className="pointer-events-none"
                         >
-                          123/45/67
+                          NIK. 123/45/67
                         </span>
                         <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
                       </div>
@@ -1469,7 +1539,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
                           cursor: 'move',
                           zIndex: 20,
-                          overflow: 'hidden'
+                          overflow: 'hidden',
+                          boxSizing: 'border-box'
                         }}
                         className="group hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 transition flex items-center justify-center bg-slate-300/80"
                         title="Geser Foto (Klik & Drag Bebas)"
@@ -1492,7 +1563,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           height: '35px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: modalLayout.nama_align === 'left' ? 'flex-start' : (modalLayout.nama_align === 'right' ? 'flex-end' : 'center'),
                           cursor: 'move',
                           zIndex: 20
                         }}
@@ -1501,14 +1572,14 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: 'sans-serif',
-                            fontWeight: '900',
-                            fontSize: '13px',
+                            fontFamily: "'Poppins', sans-serif",
+                            fontWeight: modalLayout.nama_weight || '700',
+                            fontSize: `${modalLayout.nama_size || '13'}px`,
                             color: modalLayout.nama_color,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
-                            lineHeight: '1.2',
-                            textAlign: 'center',
+                            lineHeight: '0.85',
+                            textAlign: modalLayout.nama_align || 'center',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             display: '-webkit-box',
@@ -1722,7 +1793,19 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto X (Samping: {modalLayout.photo_left}%)</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto X (Samping: {modalLayout.photo_left}%)</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const centeredLeft = (50 * (1 - Number(modalLayout.photo_width) / 320)).toFixed(1);
+                              setModalLayout(prev => ({ ...prev, photo_left: centeredLeft }));
+                            }}
+                            className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+                          >
+                            Tengahkan Foto (Align Center)
+                          </button>
+                        </div>
                         <input type="range" min="-50" max="150" step="0.5" value={modalLayout.photo_left}
                           onChange={e => setModalLayout(prev => ({ ...prev, photo_left: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
@@ -1779,8 +1862,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     </>
                   )}
 
-                  {/* Text Color Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
+                  {/* Text & Photo Color Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {/* Warna Jabatan */}
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
@@ -1817,6 +1900,136 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <input type="text" value={modalLayout.nama_color}
                           onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
                           className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+
+                    {/* Warna Latar Belakang Foto Default */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Latar Foto Default</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.photo_bg_color || '#1b365d'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.photo_bg_color || '#1b365d'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text Alignment Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
+                    {/* Align Jabatan */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Jabatan</label>
+                      <select value={modalLayout.jabatan_align || 'center'}
+                        onChange={e => setModalLayout(prev => ({ ...prev, jabatan_align: e.target.value as 'center' | 'left' | 'right' }))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                        <option value="center">Tengah (Center)</option>
+                        <option value="left">Kiri (Left)</option>
+                        <option value="right">Kanan (Right)</option>
+                      </select>
+                    </div>
+
+                    {/* Align NIK */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align NIK</label>
+                      <select value={modalLayout.nik_align || 'center'}
+                        onChange={e => setModalLayout(prev => ({ ...prev, nik_align: e.target.value as 'center' | 'left' | 'right' }))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                        <option value="center">Tengah (Center)</option>
+                        <option value="left">Kiri (Left)</option>
+                        <option value="right">Kanan (Right)</option>
+                      </select>
+                    </div>
+
+                    {/* Align Nama */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Nama</label>
+                      <select value={modalLayout.nama_align || 'center'}
+                        onChange={e => setModalLayout(prev => ({ ...prev, nama_align: e.target.value as 'center' | 'left' | 'right' }))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                        <option value="center">Tengah (Center)</option>
+                        <option value="left">Kiri (Left)</option>
+                        <option value="right">Kanan (Right)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Font Size & Weight Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-3 grid grid-cols-3 gap-3">
+                    {/* Jabatan Font Config */}
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Jabatan</label>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.jabatan_size || '11'}px)</label>
+                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
+                        <select value={modalLayout.jabatan_weight || '900'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_weight: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="300">Thin (300)</option>
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                          <option value="900">Black (900)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* NIK Font Config */}
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font NIK</label>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nik_size || '10'}px)</label>
+                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
+                        <select value={modalLayout.nik_weight || '400'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_weight: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="300">Thin (300)</option>
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                          <option value="900">Black (900)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Nama Font Config */}
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Nama</label>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nama_size || '13'}px)</label>
+                        <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
+                        <select value={modalLayout.nama_weight || '700'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_weight: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="300">Thin (300)</option>
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                          <option value="900">Black (900)</option>
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -1922,7 +2135,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           height: '24px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: modalLayout.jabatan_align === 'left' ? 'flex-start' : (modalLayout.jabatan_align === 'right' ? 'flex-end' : 'center'),
                           cursor: 'move',
                           zIndex: 20
                         }}
@@ -1932,10 +2145,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <span
                           style={{
                             fontFamily: 'sans-serif',
-                            fontWeight: '900',
-                            fontSize: '11px',
+                            fontWeight: modalLayout.jabatan_weight || '900',
+                            fontSize: `${modalLayout.jabatan_size || '11'}px`,
                             color: modalLayout.jabatan_color,
-                            letterSpacing: '0.5px'
+                            letterSpacing: '0.5px',
+                            textAlign: modalLayout.jabatan_align || 'center'
                           }}
                           className="truncate pointer-events-none"
                         >
@@ -1958,7 +2172,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           height: '18px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: modalLayout.nik_align === 'left' ? 'flex-start' : (modalLayout.nik_align === 'right' ? 'flex-end' : 'center'),
                           cursor: 'move',
                           zIndex: 20
                         }}
@@ -1967,15 +2181,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: 'sans-serif',
-                            fontWeight: '900',
-                            fontSize: '10px',
+                            fontFamily: "'Lato', sans-serif",
+                            fontWeight: modalLayout.nik_weight || '400',
+                            fontSize: `${modalLayout.nik_size || '10'}px`,
                             color: modalLayout.nik_color,
-                            letterSpacing: '0.5px'
+                            letterSpacing: '0.5px',
+                            textAlign: modalLayout.nik_align || 'center'
                           }}
                           className="pointer-events-none"
                         >
-                          123/45/67
+                          NIK. 123/45/67
                         </span>
                         <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
                       </div>
@@ -2020,7 +2235,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           height: '35px',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          justifyContent: modalLayout.nama_align === 'left' ? 'flex-start' : (modalLayout.nama_align === 'right' ? 'flex-end' : 'center'),
                           cursor: 'move',
                           zIndex: 20
                         }}
@@ -2029,14 +2244,14 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: 'sans-serif',
-                            fontWeight: '900',
-                            fontSize: '13px',
+                            fontFamily: "'Poppins', sans-serif",
+                            fontWeight: modalLayout.nama_weight || '700',
+                            fontSize: `${modalLayout.nama_size || '13'}px`,
                             color: modalLayout.nama_color,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
-                            lineHeight: '1.2',
-                            textAlign: 'center',
+                            lineHeight: '0.85',
+                            textAlign: modalLayout.nama_align || 'center',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             display: '-webkit-box',
@@ -2297,7 +2512,19 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto X (Samping: {modalLayout.photo_left}%)</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Foto X (Samping: {modalLayout.photo_left}%)</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const centeredLeft = (50 * (1 - Number(modalLayout.photo_width) / 320)).toFixed(1);
+                              setModalLayout(prev => ({ ...prev, photo_left: centeredLeft }));
+                            }}
+                            className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
+                          >
+                            Tengahkan Foto (Align Center)
+                          </button>
+                        </div>
                         <input type="range" min="-50" max="150" step="0.5" value={modalLayout.photo_left}
                           onChange={e => setModalLayout(prev => ({ ...prev, photo_left: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
@@ -2354,8 +2581,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     </>
                   )}
 
-                  {/* Text Color Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
+                  {/* Text & Photo Color Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {/* Warna Jabatan */}
                     <div className="space-y-1">
                       <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
@@ -2392,6 +2619,136 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <input type="text" value={modalLayout.nama_color}
                           onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
                           className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+
+                    {/* Warna Latar Belakang Foto Default */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Latar Foto Default</label>
+                      <div className="flex gap-1.5 items-center">
+                        <input type="color" value={modalLayout.photo_bg_color || '#1b365d'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                        <input type="text" value={modalLayout.photo_bg_color || '#1b365d'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Text Alignment Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
+                    {/* Align Jabatan */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Jabatan</label>
+                      <select value={modalLayout.jabatan_align || 'center'}
+                        onChange={e => setModalLayout(prev => ({ ...prev, jabatan_align: e.target.value as 'center' | 'left' | 'right' }))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                        <option value="center">Tengah (Center)</option>
+                        <option value="left">Kiri (Left)</option>
+                        <option value="right">Kanan (Right)</option>
+                      </select>
+                    </div>
+
+                    {/* Align NIK */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align NIK</label>
+                      <select value={modalLayout.nik_align || 'center'}
+                        onChange={e => setModalLayout(prev => ({ ...prev, nik_align: e.target.value as 'center' | 'left' | 'right' }))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                        <option value="center">Tengah (Center)</option>
+                        <option value="left">Kiri (Left)</option>
+                        <option value="right">Kanan (Right)</option>
+                      </select>
+                    </div>
+
+                    {/* Align Nama */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Nama</label>
+                      <select value={modalLayout.nama_align || 'center'}
+                        onChange={e => setModalLayout(prev => ({ ...prev, nama_align: e.target.value as 'center' | 'left' | 'right' }))}
+                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
+                        <option value="center">Tengah (Center)</option>
+                        <option value="left">Kiri (Left)</option>
+                        <option value="right">Kanan (Right)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Font Size & Weight Configurator */}
+                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-3 grid grid-cols-3 gap-3">
+                    {/* Jabatan Font Config */}
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Jabatan</label>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.jabatan_size || '11'}px)</label>
+                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
+                        <select value={modalLayout.jabatan_weight || '900'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_weight: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="300">Thin (300)</option>
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                          <option value="900">Black (900)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* NIK Font Config */}
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font NIK</label>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nik_size || '10'}px)</label>
+                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
+                        <select value={modalLayout.nik_weight || '400'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_weight: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="300">Thin (300)</option>
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                          <option value="900">Black (900)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Nama Font Config */}
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Nama</label>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nama_size || '13'}px)</label>
+                        <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
+                        <select value={modalLayout.nama_weight || '700'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_weight: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="300">Thin (300)</option>
+                          <option value="400">Regular (400)</option>
+                          <option value="500">Medium (500)</option>
+                          <option value="600">Semi Bold (600)</option>
+                          <option value="700">Bold (700)</option>
+                          <option value="800">Extra Bold (800)</option>
+                          <option value="900">Black (900)</option>
+                        </select>
                       </div>
                     </div>
                   </div>

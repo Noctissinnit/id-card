@@ -25,6 +25,7 @@ interface Area {
 
 interface IDCardCropperProps {
   imageSrc: string;
+  defaultBgColor?: string;
   onCropComplete: (croppedImageBase64: string) => void;
   onCancel: () => void;
 }
@@ -104,12 +105,12 @@ const applyBackgroundColor = (base64Image: string, color: string): Promise<strin
     img.src = base64Image;
   });
 
-export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: IDCardCropperProps) {
+export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', onCropComplete, onCancel }: IDCardCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [removeBg, setRemoveBg] = useState(false);
-  const [bgColor, setBgColor] = useState<string>('transparent');
+  const [bgColor, setBgColor] = useState<string>(defaultBgColor);
   const [cropperImage, setCropperImage] = useState(imageSrc);
   
   // AI Progress States
@@ -364,68 +365,6 @@ export default function IDCardCropper({ imageSrc, onCropComplete, onCancel }: ID
               Hapus Latar Belakang Otomatis (AI)
             </span>
           </label>
-        </div>
-
-        {/* BG Color Option */}
-        <div className="w-full flex flex-col gap-2 pb-5 px-2 items-start border-t border-slate-100 pt-3.5">
-          <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-            Warna Latar Foto Baru (Opsional)
-          </span>
-          <div className="flex items-center gap-3 mt-1 w-full flex-wrap">
-            {/* Transparent option */}
-            <button
-              type="button"
-              onClick={() => setBgColor('transparent')}
-              disabled={loading}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
-                bgColor === 'transparent'
-                  ? 'bg-indigo-50 border-indigo-500 text-indigo-600 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              Transparan
-            </button>
-            {/* Red option */}
-            <button
-              type="button"
-              onClick={() => setBgColor('#df1919')}
-              disabled={loading}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
-                bgColor === '#df1919'
-                  ? 'bg-red-50 border-red-500 text-red-600 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <span className="w-3 h-3 rounded-full bg-[#df1919] border border-black/10 inline-block" />
-              Merah
-            </button>
-            {/* Blue option */}
-            <button
-              type="button"
-              onClick={() => setBgColor('#2b539f')}
-              disabled={loading}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
-                bgColor === '#2b539f'
-                  ? 'bg-blue-50 border-blue-500 text-blue-600 shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <span className="w-3 h-3 rounded-full bg-[#2b539f] border border-black/10 inline-block" />
-              Biru
-            </button>
-
-            {/* Custom Color Picker option */}
-            <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50 transition cursor-pointer relative disabled:opacity-50">
-              <input
-                type="color"
-                value={bgColor !== 'transparent' && bgColor !== '#df1919' && bgColor !== '#2b539f' ? bgColor : '#cccccc'}
-                disabled={loading}
-                onChange={(e) => setBgColor(e.target.value)}
-                className="w-4 h-4 border-none p-0 cursor-pointer bg-transparent rounded disabled:opacity-50"
-              />
-              <span className="text-xs font-semibold text-slate-600">Kustom</span>
-            </div>
-          </div>
         </div>
 
         {/* Action Buttons */}

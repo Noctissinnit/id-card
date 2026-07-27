@@ -361,6 +361,8 @@ export async function createUnitAction(formData: FormData) {
     }
 
     revalidatePath('/admin')
+    revalidatePath('/form')
+    revalidatePath('/')
     return { success: true, unit: data?.[0] }
   } catch (err: any) {
     return { error: err.message || 'Terjadi kesalahan.' }
@@ -435,6 +437,8 @@ export async function updateUnitAction(formData: FormData) {
     }
 
     revalidatePath('/admin')
+    revalidatePath('/form')
+    revalidatePath('/')
     return { success: true, unit: data?.[0] }
   } catch (err: any) {
     return { error: err.message || 'Terjadi kesalahan.' }
@@ -476,6 +480,8 @@ export async function deleteUnitAction(unitId: number) {
     }
 
     revalidatePath('/admin')
+    revalidatePath('/form')
+    revalidatePath('/')
     return { success: true }
   } catch (err: any) {
     return { error: err.message || 'Terjadi kesalahan.' }

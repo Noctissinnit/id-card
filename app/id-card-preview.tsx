@@ -23,6 +23,21 @@ import {
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
 import { getPhoto, deletePhoto } from './db';
+import QZPrinterControl from '../components/QZPrinterControl';
+
+// Helper to format name if it has more than 2 words
+export function formatNameLines(name: string): string {
+  if (!name) return '';
+  const words = name.trim().split(/\s+/);
+  const n = words.length;
+  if (n <= 1) {
+    return name;
+  }
+  const splitIndex = Math.floor(n / 2);
+  const firstLine = words.slice(0, splitIndex).join(' ');
+  const secondLine = words.slice(splitIndex).join(' ');
+  return `${firstLine}\n${secondLine}`;
+}
 
 // Dynamic SVG Barcode Generator
 const Barcode = ({ value }: { value: string }) => {
@@ -303,8 +318,9 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   const triggerDownload = async (element: HTMLDivElement, filename: string) => {
     try {
       // Temporarily remove hidden offscreen elements if needed, though they are in DOM
+      // Calibrated to 300 DPI resolution for HID Fargo DTC1250e thermal ribbon ID card printers
       const canvas = await html2canvas(element, {
-        scale: 3, // Premium ultra-crisp resolution
+        scale: 3.175, // Exact 300 DPI HD print resolution (CR-80 54mm x 86mm)
         useCORS: true, // Handle external fonts/images if any
         backgroundColor: null, // Transparent bg
         logging: false,
@@ -346,7 +362,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         container.style.display = 'flex';
         container.style.gap = '20px';
         container.style.padding = '20px';
-        container.style.background = '#09090b'; // dark backdrop for luxury presentation
+        container.style.background = '#00275e'; // dark backdrop for luxury presentation
 
         const frontClone = exportFrontRef.current?.cloneNode(true) as HTMLDivElement;
         const backClone = exportBackRef.current?.cloneNode(true) as HTMLDivElement;
@@ -389,7 +405,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const posJabatan = config?.jabatan_top !== undefined ? `${config.jabatan_top}%` : '26.5%'
       const posJabatanLeft = config?.jabatan_left !== undefined ? `${config.jabatan_left}%` : '5%'
       const posNik = config?.nik_top !== undefined ? `${config.nik_top}%` : '35%'
-      const posNikLeft = config?.nik_left !== undefined ? `${config.nik_left}%` : '5%'
+      const posNikLeft = (config?.nik_left !== undefined && String(config.nik_left) !== '0') ? `${config.nik_left}%` : '5%'
       const posNama = config?.nama_top !== undefined ? `${config.nama_top}%` : '86%'
       const posNamaLeft = config?.nama_left !== undefined ? `${config.nama_left}%` : '5%'
       const posPhoto = config?.photo_top !== undefined ? `${config.photo_top}%` : '43%'
@@ -401,7 +417,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const photoW = `${photoRawW}px`
       const photoH = `${photoRawH}px`
       const photoShape = config?.photo_shape || 'rectangle'
-      const textColor = config?.text_color || '#000000'
+      const textColor = config?.text_color ? config.text_color : '#ffffff'
 
       // Visibility switches
       const showJabatan = config?.show_jabatan !== undefined ? !!config.show_jabatan : true
@@ -409,10 +425,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const showNama = config?.show_nama !== undefined ? !!config.show_nama : true
       const showPhoto = config?.show_photo !== undefined ? !!config.show_photo : true
 
-      // Colors mapping
-      const jabatanColor = config?.jabatan_color || textColor
-      const nikColor = config?.nik_color || textColor
-      const namaColor = config?.nama_color || textColor
+      // Colors mapping (respect exact chosen colors from unit layout_config)
+      const jabatanColor = config?.jabatan_color ? config.jabatan_color : '#facc15'
+      const nikColor = config?.nik_color ? config.nik_color : '#ffffff'
+      const namaColor = config?.nama_color ? config.nama_color : '#ffffff'
 
       // Scaled element dimensions (editor pixels × SCALE)
       // Editor: text width=216, jabatan h=24, nik h=18, nama h=35
@@ -457,23 +473,20 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 height: `${jabatanH}px`,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
+                justifyContent: config?.jabatan_align === 'left' ? 'flex-start' : (config?.jabatan_align === 'right' ? 'flex-end' : 'center'),
+                textAlign: config?.jabatan_align || 'center',
                 zIndex: 10
               }}
             >
               <span
                 style={{
                   fontFamily: 'sans-serif',
-                  fontWeight: '900',
-                  fontSize: 
-                    (data.jabatan || '').length > 25 ? `${Math.round(11 * SCALE)}px` :
-                    (data.jabatan || '').length > 18 ? `${Math.round(13 * SCALE)}px` :
-                    (data.jabatan || '').length > 12 ? `${Math.round(11 * SCALE)}px` : `${Math.round(11 * SCALE)}px`,
+                  fontWeight: config?.jabatan_weight || '900',
+                  fontSize: `${Math.round(Number(config?.jabatan_size || 11) * SCALE)}px`,
                   color: jabatanColor,
                   letterSpacing: '0.5px',
                   lineHeight: '1.2',
-                  textAlign: 'center',
+                  textAlign: config?.jabatan_align || 'center',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   display: '-webkit-box',
@@ -497,21 +510,22 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 height: `${nikH}px`,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
+                justifyContent: config?.nik_align === 'left' ? 'flex-start' : (config?.nik_align === 'right' ? 'flex-end' : 'center'),
+                textAlign: config?.nik_align || 'center',
                 zIndex: 10
               }}
             >
               <span
                 style={{
-                  fontFamily: 'sans-serif',
-                  fontWeight: '900',
-                  fontSize: `${Math.round(10 * SCALE)}px`,
+                  fontFamily: "'Lato', sans-serif",
+                  fontWeight: config?.nik_weight || '400',
+                  fontSize: `${Math.round(Number(config?.nik_size || 10) * SCALE)}px`,
                   color: nikColor,
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  textAlign: config?.nik_align || 'center'
                 }}
               >
-                {data.nik || '690/03/05'}
+                NIK. {data.nik || '690/03/05'}
               </span>
             </div>
           )}
@@ -532,7 +546,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: photoUrl ? 'transparent' : '#e4e4e7',
+                backgroundColor: photoUrl ? (config?.photo_bg_color || '#1b365d') : '#e4e4e7',
                 boxSizing: 'border-box',
                 zIndex: 10
               }}
@@ -541,6 +555,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 <img 
                   src={photoUrl} 
                   alt="Profile Photo" 
+                  crossOrigin="anonymous"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
@@ -563,32 +578,30 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 height: `${namaH}px`,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
+                justifyContent: config?.nama_align === 'left' ? 'flex-start' : (config?.nama_align === 'right' ? 'flex-end' : 'center'),
+                textAlign: config?.nama_align || 'center',
                 zIndex: 10
               }}
             >
               <span
                 style={{
-                  fontFamily: 'sans-serif',
-                  fontWeight: '900',
-                  fontSize: 
-                    (data.nama || '').length > 25 ? `${Math.round(10 * SCALE)}px` :
-                    (data.nama || '').length > 20 ? `${Math.round(11 * SCALE)}px` :
-                    (data.nama || '').length > 15 ? `${Math.round(12 * SCALE)}px` : `${Math.round(13 * SCALE)}px`,
+                  fontFamily: "'Poppins', sans-serif",
+                  fontWeight: config?.nama_weight || '700',
+                  fontSize: `${Math.round(Number(config?.nama_size || 13) * SCALE)}px`,
                   color: namaColor,
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  lineHeight: '1.2',
-                  textAlign: 'center',
+                  lineHeight: '0.85',
+                  textAlign: config?.nama_align || 'center',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical'
+                  WebkitBoxOrient: 'vertical',
+                  whiteSpace: 'pre-line'
                 }}
               >
-                {data.nama || 'IKA'}
+                {formatNameLines(data.nama || 'IKA')}
               </span>
             </div>
           )}
@@ -638,7 +651,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: photoUrl ? 'transparent' : '#e4e4e7',
+              backgroundColor: photoUrl ? '#1b365d' : '#e4e4e7',
               boxSizing: 'border-box',
               zIndex: 10
             }}
@@ -647,6 +660,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               <img 
                 src={photoUrl} 
                 alt="Profile Photo" 
+                crossOrigin="anonymous"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
@@ -661,7 +675,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
           <div 
             style={{
               position: 'absolute',
-              top: '70.8%',
+              top: '68.5%',
               left: '12%',
               width: '76%',
               boxSizing: 'border-box',
@@ -670,7 +684,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               flexDirection: 'column',
               alignItems: 'flex-start',
               justifyContent: 'flex-start',
-              height: '16%',
+              height: '19%',
               zIndex: 10
             }}
           >
@@ -678,33 +692,34 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             <h2 
               style={{
                 color: 'white',
-                fontFamily: 'var(--font-poppins), system-ui, sans-serif',
-                fontWeight: '800',
-                fontSize: data.nama.length > 20 ? '14px' : data.nama.length > 15 ? '16px' : '18px',
+                fontFamily: "'Poppins', sans-serif",
+                fontWeight: '700',
+                fontSize: '22px',
                 textTransform: 'uppercase',
                 margin: '0',
-                letterSpacing: '0.5px',
-                lineHeight: '1.2',
-                maxHeight: '44px',
+                letterSpacing: '-0.3px',
+                lineHeight: '0.85',
+                maxHeight: '52px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 display: '-webkit-box',
                 WebkitLineClamp: 2,
                 WebkitBoxOrient: 'vertical',
-                textAlign: 'left'
+                textAlign: 'left',
+                whiteSpace: 'pre-line'
               }}
             >
-              {data.nama || 'MARIA YUNITA TIARA KRISTIANTI'}
+              {formatNameLines(data.nama || 'MARIA YUNITA TIARA KRISTIANTI')}
             </h2>
             
             {/* NIK */}
             <p 
               style={{
-                color: '#facc15',
-                fontFamily: 'var(--font-lato), system-ui, sans-serif',
-                fontWeight: '700',
-                fontSize: '13px',
-                marginTop: '2px',
+                color: '#c6ff00',
+                fontFamily: "'Lato', sans-serif",
+                fontWeight: '400',
+                fontSize: '15px',
+                marginTop: (data.nama || '').trim().split(/\s+/).length > 2 ? '8px' : '4px',
                 marginBottom: '0',
                 letterSpacing: '0.5px',
                 textAlign: 'left'
@@ -759,7 +774,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         <div className="relative w-36 h-36 flex items-center justify-center" style={{ width: '144px', height: '144px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {/* Photo background container */}
           <div 
-            className={`w-32 h-32 overflow-hidden relative ${photoUrl ? 'bg-transparent' : 'bg-zinc-800'} ${activeTheme.photoBorder} flex items-center justify-center`}
+            className={`w-32 h-32 overflow-hidden relative ${photoUrl ? 'bg-[#1b365d]' : 'bg-zinc-800'} ${activeTheme.photoBorder} flex items-center justify-center`}
             style={{ 
               width: '128px', 
               height: '128px', 
@@ -773,6 +788,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               <img 
                 src={photoUrl} 
                 alt="Profile Photo" 
+                crossOrigin="anonymous"
                 className="w-full h-full object-cover"
                 style={{ width: '128px', height: '128px', objectFit: 'cover' }}
               />
@@ -803,10 +819,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
       {/* Member Details */}
       <div className="text-center flex flex-col justify-center items-center z-10 flex-grow" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '12px', flexGrow: 1 }}>
-        <h2 className={`text-xl tracking-wide uppercase line-clamp-1 w-full max-w-[260px] ${activeTheme.textPrimary}`} style={{ fontSize: '20px', lineHeight: '28px', fontFamily: 'var(--font-poppins), sans-serif' }}>
+        <h2 className={`text-xl tracking-wide uppercase line-clamp-1 w-full max-w-[260px] ${activeTheme.textPrimary}`} style={{ fontSize: '20px', lineHeight: '28px', fontFamily: "'Poppins', sans-serif" }}>
           {data.nama || 'JOHN DOE'}
         </h2>
-        <p className={`text-[10px] font-mono tracking-widest text-zinc-400 font-medium`} style={{ fontSize: '10px', marginTop: '2px', fontFamily: 'var(--font-lato), sans-serif' }}>
+        <p className={`text-[10px] font-mono tracking-widest text-zinc-400 font-medium`} style={{ fontSize: '10px', marginTop: '2px', fontFamily: "'Lato', sans-serif" }}>
           NIK: {data.nik || '820491849182903'}
         </p>
 
@@ -1150,14 +1166,21 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             </button>
 
             <div className="space-y-2 pt-2 border-t border-slate-200">
-              <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block">
-                Opsi Cetak (PDF / Kertas)
-              </label>
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                  Cetak Langsung Ke Printer (Fargo DTC1250e)
+                </label>
+                <span className="text-[9px] bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Direct Connect
+                </span>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <button 
                   onClick={() => triggerPrint('front')}
                   disabled={downloading}
                   className="flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-sm transition disabled:opacity-50"
+                  title="Cetak langsung Sisi Depan ke Printer Fargo DTC1250e"
                 >
                   <Printer className="w-4 h-4 text-cyan-600" />
                   Sisi Depan
@@ -1166,6 +1189,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   onClick={() => triggerPrint('back')}
                   disabled={downloading}
                   className="flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-sm transition disabled:opacity-50"
+                  title="Cetak langsung Sisi Belakang ke Printer Fargo DTC1250e"
                 >
                   <Printer className="w-4 h-4 text-purple-600" />
                   Sisi Belakang
@@ -1174,6 +1198,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   onClick={() => triggerPrint('both')}
                   disabled={downloading}
                   className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-md shadow-emerald-500/10 transition disabled:opacity-50"
+                  title="Cetak langsung Kedua Sisi ke Printer Fargo DTC1250e"
                 >
                   <Printer className="w-4 h-4 text-white" />
                   Kedua Sisi
@@ -1184,16 +1209,19 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
           <div className="h-[1px] bg-slate-200" />
 
-          {/* Tips */}
-          <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-200 space-y-2">
-            <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-amber-650" />
-              Petunjuk Interaksi
+          {/* Tips Cetak Langsung / Silent Printing */}
+          <div className="bg-indigo-50/60 rounded-2xl p-4 border border-indigo-100 space-y-2">
+            <span className="text-[10px] font-bold tracking-wider text-indigo-700 uppercase flex items-center gap-1.5">
+              <Printer className="w-3.5 h-3.5 text-indigo-600" />
+              Cetak Otomatis Tanpa Popup (Silent Kiosk)
             </span>
-            <p className="text-xs text-slate-650 leading-relaxed">
-              Klik kartu di samping untuk membalikkannya secara langsung. Anda dapat melihat tampilan depan dan belakang dengan transisi 3D yang mulus.
+            <p className="text-[11px] text-slate-650 leading-relaxed">
+              Set printer bawaan Windows ke <strong>FARGO DTC1250e Card Printer</strong>. Untuk cetak 1-klik tanpa muncul jendela pratinjau, jalankan browser Chrome/Edge dengan flag: <code className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-mono text-indigo-800">--kiosk-printing</code>.
             </p>
           </div>
+
+          {/* QZ Tray Integration Panel */}
+          <QZPrinterControl cardElementId="export-front-card" cardBackElementId="export-back-card" />
 
           {/* Reset / Create New Button */}
           <button
@@ -1250,21 +1278,25 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         </div>
       </div>
 
-      {/* HIDDEN OFFSCREEN WRAPPER FOR PERFECT HTML2CANVAS EXPORTS */}
-      {/* This renders flat cards without any 3D translations, preventing export warping/bugs */}
+      {/* HIDDEN OFFSCREEN WRAPPER FOR FARGO DTC1250e PRINT & EXPORTS */}
+      {/* Renders flat cards formatted directly to 54mm x 86mm CR-80 pages for Fargo printer */}
       <div 
         id="print-area"
-        className="absolute top-0 left-0 flex gap-8 pointer-events-none"
+        className="absolute top-0 left-0 pointer-events-none"
         style={{ opacity: 0, zIndex: -50 }}
       >
         <div 
+          id="export-front-card"
           ref={exportFrontRef}
+          className="print-page"
           style={{ display: (printTarget === 'front' || printTarget === 'both') ? 'block' : 'none' }}
         >
           <CardFront isExport={true} />
         </div>
         <div 
+          id="export-back-card"
           ref={exportBackRef}
+          className="print-page"
           style={{ display: (printTarget === 'back' || printTarget === 'both') ? 'block' : 'none' }}
         >
           <CardBack isExport={true} />
