@@ -207,24 +207,32 @@ export async function printIDCardImage({
     throw new Error('Gambar ID Card tidak valid (Base64 kosong).');
   }
 
-  // Configure printer config target (calibrated to CR-80 card specs: 54mm x 86mm)
-  // We set margins to 0 for borderless edge-to-edge card printing.
-  // We omit density and rasterize to prevent the GDI print spooler from inflating the file size to gigabytes.
+  // Configure printer config target (calibrated to CR-80 card specs: 55mm x 86mm)
+  // For virtual PDF printers, we use standard sizes to avoid blank outputs.
+  // For physical Fargo card printers, we force a custom 57mm x 89mm full bleed to get edge-to-edge prints.
+  const sizeConfig = { width: 53.98, height: 85.60 };
+
   const config = qz.configs.create(printerName, {
     colorType: options.colorType || 'color',
     copies: options.copies || 1,
     orientation: options.orientation || 'portrait',
     units: 'mm',
-    size: { width: 54, height: 86 }, // CR-80 card size
+    size: sizeConfig,
     scaleContent: options.scaleContent !== undefined ? options.scaleContent : true,
-    margins: 0 // borderless edge-to-edge card printing
+    margins: {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0
+    }
   });
 
-  // Formulate QZ Print data array (CR-80 Image Format using optimized type: 'image')
+  // Formulate QZ Print data array (CR-80 Image Format using correct type: 'pixel', format: 'image', flavor: 'base64')
   const printData = [
     {
-      type: 'image',
-      format: 'base64',
+      type: 'pixel',
+      format: 'image',
+      flavor: 'base64',
       data: cleanBase64
     }
   ];

@@ -6,13 +6,11 @@ import { User, Building, ShieldCheck, Calendar, Phone, Mail, Globe } from 'lucid
 export function formatNameLines(name: string): string {
   if (!name) return '';
   const words = name.trim().split(/\s+/);
-  const n = words.length;
-  if (n <= 1) {
+  if (words.length <= 1) {
     return name;
   }
-  const splitIndex = Math.floor(n / 2);
-  const firstLine = words.slice(0, splitIndex).join(' ');
-  const secondLine = words.slice(splitIndex).join(' ');
+  const firstLine = words[0];
+  const secondLine = words.slice(1).join(' ');
   return `${firstLine}\n${secondLine}`;
 }
 
@@ -82,7 +80,7 @@ export default function IdCard({ data, side = 'front' }: IdCardProps) {
     return (
       <div
         id="id-card-back"
-        className="w-[320px] h-[509px] relative overflow-hidden bg-white text-slate-800 shadow-xl shrink-0 border border-slate-200"
+        className="w-[330px] h-[515px] relative overflow-hidden bg-white text-slate-800 shadow-xl shrink-0 border border-slate-200"
         style={{
           boxSizing: 'border-box'
         }}
@@ -142,7 +140,7 @@ export default function IdCard({ data, side = 'front' }: IdCardProps) {
   return (
     <div
       id="id-card"
-      className="w-[320px] h-[509px] relative overflow-hidden bg-white text-slate-900 shadow-xl shrink-0 border border-slate-200 select-none"
+      className="w-[330px] h-[515px] relative overflow-hidden bg-white text-slate-900 shadow-xl shrink-0 border border-slate-200 select-none"
       style={{
         boxSizing: 'border-box'
       }}

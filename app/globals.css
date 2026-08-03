@@ -62,16 +62,16 @@ body {
   animation: pulse-glow 8s infinite alternate;
 }
 
-/* Print Styles Calibrated specifically for HID Fargo DTC1250e & CR-80 Standard ID Cards (54mm x 86mm x 0.80mm) */
+/* Print Styles Calibrated specifically for HID Fargo DTC1250e & CR-80 Standard ID Cards (55mm x 86mm x 0.80mm) */
 @media print {
   @page {
-    size: 54mm 86mm;
+    size: 53.98mm 85.60mm;
     margin: 0;
   }
 
   html, body {
-    width: 54mm !important;
-    height: 86mm !important;
+    width: 53.98mm !important;
+    height: 85.60mm !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
@@ -84,15 +84,17 @@ body {
   }
 
   #print-area, #print-area * {
-    visibility: visible;
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   #print-area {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
-    width: 54mm !important;
-    height: 86mm !important;
+    width: 53.98mm !important;
+    height: 85.60mm !important;
     margin: 0 !important;
     padding: 0 !important;
     display: block !important;
@@ -101,8 +103,8 @@ body {
   }
 
   .print-page {
-    width: 54mm !important;
-    height: 86mm !important;
+    width: 53.98mm !important;
+    height: 85.60mm !important;
     page-break-after: always !important;
     break-after: page !important;
     overflow: hidden !important;
@@ -112,9 +114,39 @@ body {
   }
 
   .print-page .id-card-render {
-    width: 54mm !important;
-    height: 86mm !important;
+    width: 53.98mm !important; /* Exact card width to keep layout/logo perfectly proportional */
+    height: 85.60mm !important; /* Exact card height to prevent clipping of text and details */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     border-radius: 0 !important; /* Full edge-to-edge dye-sublimation print for Fargo DTC1250e */
     box-shadow: none !important;
+    overflow: visible !important; /* Allow only background images to overflow/bleed */
+  }
+
+  /* Make background template images bleed 0.5mm outside the card boundary */
+  .print-page .id-card-render > img[alt="Card Template"],
+  .print-page .id-card-render > img[alt="Card Back Template"] {
+    top: -0.5mm !important;
+    left: -0.5mm !important;
+    width: calc(100% + 1mm) !important;
+    height: calc(100% + 1mm) !important;
+    max-width: none !important;
+  }
+
+  /* Make solid/gradient backgrounds inherit and bleed 0.5mm as well */
+  .print-page .id-card-render::before {
+    content: "" !important;
+    position: absolute !important;
+    top: -0.5mm !important;
+    left: -0.5mm !important;
+    width: calc(100% + 1mm) !important;
+    height: calc(100% + 1mm) !important;
+    background: inherit !important;
+    z-index: 0 !important; /* Render at base level */
+  }
+
+  .print-hidden {
+    display: none !important;
   }
 }

@@ -25,17 +25,15 @@ import { useRouter } from 'next/navigation';
 import { getPhoto, deletePhoto } from './db';
 import QZPrinterControl from '../components/QZPrinterControl';
 
-// Helper to format name if it has more than 2 words
+// Helper to format name if it has more than 1 word
 export function formatNameLines(name: string): string {
   if (!name) return '';
   const words = name.trim().split(/\s+/);
-  const n = words.length;
-  if (n <= 1) {
+  if (words.length <= 1) {
     return name;
   }
-  const splitIndex = Math.floor(n / 2);
-  const firstLine = words.slice(0, splitIndex).join(' ');
-  const secondLine = words.slice(splitIndex).join(' ');
+  const firstLine = words[0];
+  const secondLine = words.slice(1).join(' ');
   return `${firstLine}\n${secondLine}`;
 }
 
@@ -305,9 +303,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     setPrintTarget(target);
     setTimeout(() => {
       window.print();
-    }, 50);
+    }, 500);
   };
   const cardRef = useRef<HTMLDivElement>(null);
+  const visibleFrontRef = useRef<HTMLDivElement>(null);
   
   // For html2canvas, we render non-rotated, flat versions offscreen
   const exportFrontRef = useRef<HTMLDivElement>(null);
@@ -324,6 +323,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         useCORS: true, // Handle external fonts/images if any
         backgroundColor: null, // Transparent bg
         logging: false,
+        width: element.offsetWidth - 1, // Subtract 1px to prevent sub-pixel white border gaps on high-DPI displays
+        height: element.offsetHeight - 1,
       });
       const link = document.createElement('a');
       link.download = filename;
@@ -343,11 +344,12 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
     try {
       const timestamp = new Date().getTime();
-      const sanitizedName = data.nama.toLowerCase().replace(/\s+/g, '-');
+      const sanitizedName = (data.nama || 'blank').toLowerCase().replace(/\s+/g, '-');
 
       if (mode === 'front') {
-        if (exportFrontRef.current) {
-          await triggerDownload(exportFrontRef.current, `id-card-${sanitizedName}-front-${timestamp}.png`);
+        const frontElement = visibleFrontRef.current || exportFrontRef.current;
+        if (frontElement) {
+          await triggerDownload(frontElement, `id-card-${sanitizedName}-front-${timestamp}.png`);
         }
       } else if (mode === 'back') {
         if (exportBackRef.current) {
@@ -398,8 +400,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         }
       }
 
-      // Scale factor: CardFront (320×500) / Editor (240×375) = 1.333
-      const SCALE = 320 / 240
+      // Keep the custom-template renderer aligned with the admin layout editor.
+      const PREVIEW_CARD_WIDTH = 330
+      const EDITOR_CARD_WIDTH = 250
+      const SCALE = PREVIEW_CARD_WIDTH / EDITOR_CARD_WIDTH
 
       // Positions & Dimensions mapping with defaults (percentages scale naturally)
       const posJabatan = config?.jabatan_top !== undefined ? `${config.jabatan_top}%` : '26.5%'
@@ -439,10 +443,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
       return (
         <div 
-          className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none bg-white"
+          className="w-[330px] h-[515px] id-card-render relative overflow-hidden shrink-0 select-none bg-white"
           style={{
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-            borderRadius: '16px',
+            borderRadius: isExport ? '0px' : '16px',
             boxSizing: 'border-box'
           }}
         >
@@ -453,8 +457,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             crossOrigin="anonymous"
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
+              top: '0',
+              left: '0',
               width: '100%',
               height: '100%',
               objectFit: 'fill',
@@ -525,13 +529,13 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   textAlign: config?.nik_align || 'center'
                 }}
               >
-                NIK. {data.nik || '690/03/05'}
+                {data.nik ? `NIK. ${data.nik}` : (isExport ? '' : 'NIK. 690/03/05')}
               </span>
             </div>
           )}
 
           {/* Photo Container */}
-          {showPhoto && (
+          {showPhoto && (photoUrl || !isExport) && (
             <div 
               style={{
                 position: 'absolute',
@@ -601,7 +605,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   whiteSpace: 'pre-line'
                 }}
               >
-                {formatNameLines(data.nama || 'IKA')}
+                {data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA'))}
               </span>
             </div>
           )}
@@ -612,10 +616,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     if (data.theme === 'karya-bakti') {
       return (
         <div 
-          className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none"
+          className="w-[330px] h-[515px] id-card-render relative overflow-hidden shrink-0 select-none bg-[#1570ad]"
           style={{
+            backgroundColor: '#1570ad',
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-            borderRadius: '16px',
+            borderRadius: isExport ? '0px' : '16px',
             boxSizing: 'border-box'
           }}
         >
@@ -626,8 +631,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             crossOrigin="anonymous"
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
+              top: '0',
+              left: '0',
               width: '100%',
               height: '100%',
               objectFit: 'fill',
@@ -636,40 +641,42 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
           />
 
           {/* Photo Container - Aligned with white circle inside template */}
-          <div 
-            style={{
-              position: 'absolute',
-              top: '17%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '78.5%',
-              height: '51.4%',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              border: '4px solid white',
-              boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: photoUrl ? '#1b365d' : '#e4e4e7',
-              boxSizing: 'border-box',
-              zIndex: 10
-            }}
-          >
-            {photoUrl ? (
-              <img 
-                src={photoUrl} 
-                alt="Profile Photo" 
-                crossOrigin="anonymous"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#71717a' }}>
-                <User className="w-10 h-10" />
-                <span style={{ fontSize: '9px', fontFamily: 'sans-serif' }}>NO PHOTO</span>
-              </div>
-            )}
-          </div>
+          {(photoUrl || !isExport) && (
+            <div 
+              style={{
+                position: 'absolute',
+                top: '17%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '78.5%',
+                height: '51.4%',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '4px solid white',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: photoUrl ? '#1b365d' : '#e4e4e7',
+                boxSizing: 'border-box',
+                zIndex: 10
+              }}
+            >
+              {photoUrl ? (
+                <img 
+                  src={photoUrl} 
+                  alt="Profile Photo" 
+                  crossOrigin="anonymous"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#71717a' }}>
+                  <User className="w-10 h-10" />
+                  <span style={{ fontSize: '9px', fontFamily: 'sans-serif' }}>NO PHOTO</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Member Details */}
           <div 
@@ -709,7 +716,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 whiteSpace: 'pre-line'
               }}
             >
-              {formatNameLines(data.nama || 'MARIA YUNITA TIARA KRISTIANTI')}
+              {data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('MARIA YUNITA TIARA KRISTIANTI'))}
             </h2>
             
             {/* NIK */}
@@ -725,7 +732,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 textAlign: 'left'
               }}
             >
-              NIK.{data.nik || '175/02/25'}
+              {data.nik ? `NIK.${data.nik}` : (isExport ? '' : 'NIK.175/02/25')}
             </p>
           </div>
         </div>
@@ -734,11 +741,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
     return (
       <div 
-        className={`w-[320px] h-[500px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
+        className={`w-[330px] h-[515px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
         style={{
           boxShadow: isExport ? 'none' : undefined,
           padding: '24px',
-          borderRadius: '16px',
+          borderRadius: isExport ? '0px' : '16px',
           boxSizing: 'border-box'
         }}
       >
@@ -855,11 +862,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     if (data.theme === 'karya-bakti' || customTemplate?.card_design_back) {
       return (
         <div 
-          className="w-[320px] h-[500px] id-card-render relative overflow-hidden shrink-0 select-none"
+          className="w-[330px] h-[515px] id-card-render relative overflow-hidden shrink-0 select-none"
           style={{
             background: customTemplate?.card_design_back ? 'white' : 'radial-gradient(circle at 50% 50%, #0d47a1, #08316f)',
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-            borderRadius: '16px',
+            borderRadius: isExport ? '0px' : '16px',
             padding: '24px',
             boxSizing: 'border-box',
             display: 'flex',
@@ -875,8 +882,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               crossOrigin="anonymous"
               style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
+                top: '0',
+                left: '0',
                 width: '100%',
                 height: '100%',
                 objectFit: 'fill',
@@ -949,7 +956,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               
               {/* Real simulated QR code */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <QRCode value={`https://verify.yayasankaryabakti.org/id/${data.nik || '175/02/25'}`} />
+                {data.nik ? (
+                  <QRCode value={`https://verify.yayasankaryabakti.org/id/${data.nik}`} />
+                ) : (
+                  isExport ? null : <QRCode value="https://verify.yayasankaryabakti.org/id/175/02/25" />
+                )}
               </div>
             </div>
           </div>
@@ -987,11 +998,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
     return (
       <div 
-        className={`w-[320px] h-[500px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
+        className={`w-[330px] h-[515px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
         style={{
           boxShadow: isExport ? 'none' : undefined,
           padding: '24px',
-          borderRadius: '16px',
+          borderRadius: isExport ? '0px' : '16px',
           boxSizing: 'border-box'
         }}
       >
@@ -1251,12 +1262,12 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             className="perspective-1000 cursor-pointer group"
           >
             <div 
-              className={`w-[320px] h-[500px] preserve-3d transition-transform duration-700 ease-out relative ${
+              className={`w-[330px] h-[515px] preserve-3d transition-transform duration-700 ease-out relative ${
                 isFlipped ? 'rotate-y-180' : ''
               }`}
             >
               {/* Front side card */}
-              <div className="absolute inset-0 backface-hidden z-25">
+              <div ref={visibleFrontRef} className="absolute inset-0 backface-hidden z-25">
                 <CardFront />
               </div>
 
@@ -1288,16 +1299,14 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         <div 
           id="export-front-card"
           ref={exportFrontRef}
-          className="print-page"
-          style={{ display: (printTarget === 'front' || printTarget === 'both') ? 'block' : 'none' }}
+          className={`print-page ${printTarget !== 'front' && printTarget !== 'both' ? 'print-hidden' : ''}`}
         >
           <CardFront isExport={true} />
         </div>
         <div 
           id="export-back-card"
           ref={exportBackRef}
-          className="print-page"
-          style={{ display: (printTarget === 'back' || printTarget === 'both') ? 'block' : 'none' }}
+          className={`print-page ${printTarget !== 'back' && printTarget !== 'both' ? 'print-hidden' : ''}`}
         >
           <CardBack isExport={true} />
         </div>

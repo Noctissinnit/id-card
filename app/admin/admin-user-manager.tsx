@@ -66,6 +66,10 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
+  const PREVIEW_CARD_WIDTH = 330
+  const EDITOR_CARD_WIDTH = 250
+  const EDITOR_SCALE = EDITOR_CARD_WIDTH / PREVIEW_CARD_WIDTH
+
   // Local copy of units that syncs with props but can also be updated locally after save
   const [localUnits, setLocalUnits] = useState<Unit[]>(units)
   useEffect(() => {
@@ -289,8 +293,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const newTopPx = mouseY - dragOffset.y
 
     // Element dimensions (for clamping)
-    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * 0.75) : 216 // 90% of 240px
-    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * 0.75) : (activeDragElement === 'nama' ? 35 : 24)
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : 216
+    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24)
 
     // Clamp values (allowing half width bleed off edge for freedom)
     const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
@@ -345,8 +349,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const newLeftPx = mouseX - dragOffset.x
     const newTopPx = mouseY - dragOffset.y
 
-    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * 0.75) : 216
-    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * 0.75) : (activeDragElement === 'nama' ? 35 : 24)
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : 216
+    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24)
 
     const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
     const clampedY = Math.max(-elementHeight / 2, Math.min(newTopPx, rect.height - elementHeight / 2))
@@ -1433,7 +1437,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     onMouseLeave={handleDragEnd}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleDragEnd}
-                    className="w-[240px] h-[375px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
+                    className="w-[250px] h-[391px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
                   >
                     {/* Background template preview */}
                     {frontDesignBase64 ? (
@@ -1532,8 +1536,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.photo_top}%`,
                           left: `${modalLayout.photo_left}%`,
-                          width: `${Number(modalLayout.photo_width) * 0.75}px`,
-                          height: `${Number(modalLayout.photo_height) * 0.75}px`,
+                          width: `${Number(modalLayout.photo_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.photo_height) * EDITOR_SCALE}px`,
                           borderRadius: modalLayout.photo_shape === 'circle' ? '50%' : (modalLayout.photo_shape === 'square' ? '8px' : '0px'),
                           border: modalLayout.photo_shape === 'circle' ? '2px solid white' : (modalLayout.photo_shape === 'square' ? '2px solid white' : '1px dashed transparent'),
                           boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
@@ -1798,7 +1802,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           <button
                             type="button"
                             onClick={() => {
-                              const centeredLeft = (50 * (1 - Number(modalLayout.photo_width) / 320)).toFixed(1);
+                              const centeredLeft = (50 * (1 - Number(modalLayout.photo_width) / PREVIEW_CARD_WIDTH)).toFixed(1);
                               setModalLayout(prev => ({ ...prev, photo_left: centeredLeft }));
                             }}
                             className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
@@ -2101,7 +2105,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     onMouseLeave={handleDragEnd}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleDragEnd}
-                    className="w-[240px] h-[375px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
+                    className="w-[250px] h-[391px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
                   >
                     {/* Background template preview */}
                     {frontDesignBase64 === 'REMOVE' ? (
@@ -2205,8 +2209,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.photo_top}%`,
                           left: `${modalLayout.photo_left}%`,
-                          width: `${Number(modalLayout.photo_width) * 0.75}px`,
-                          height: `${Number(modalLayout.photo_height) * 0.75}px`,
+                          width: `${Number(modalLayout.photo_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.photo_height) * EDITOR_SCALE}px`,
                           borderRadius: modalLayout.photo_shape === 'circle' ? '50%' : (modalLayout.photo_shape === 'square' ? '8px' : '0px'),
                           border: modalLayout.photo_shape === 'circle' ? '2px solid white' : (modalLayout.photo_shape === 'square' ? '2px solid white' : '1px dashed transparent'),
                           boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
@@ -2517,7 +2521,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           <button
                             type="button"
                             onClick={() => {
-                              const centeredLeft = (50 * (1 - Number(modalLayout.photo_width) / 320)).toFixed(1);
+                              const centeredLeft = (50 * (1 - Number(modalLayout.photo_width) / PREVIEW_CARD_WIDTH)).toFixed(1);
                               setModalLayout(prev => ({ ...prev, photo_left: centeredLeft }));
                             }}
                             className="text-[9px] font-bold text-indigo-600 hover:text-indigo-800 transition cursor-pointer"
@@ -2567,7 +2571,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
                             <input type="range" min="40" max="300" step="1" value={modalLayout.photo_height}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
-                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-605" />
+                              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                         </>
                       ) : (

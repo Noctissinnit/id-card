@@ -193,17 +193,18 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
     e.preventDefault();
     setError(null);
 
-    // Validation
-    if (!nama.trim()) return setError('Nama tidak boleh kosong.');
-    if (!nik.trim()) return setError('NIK tidak boleh kosong.');
-    if (nik.length < 5) return setError('NIK minimal berisi 5 karakter.');
-    if (!photoBase64) return setError('Silakan unggah pas foto Anda.');
+    // Validation (All fields are now optional to support blank template card printing)
+    if (nik.trim() && nik.trim().length < 5) {
+      return setError('NIK minimal berisi 5 karakter.');
+    }
 
     setLoading(true);
 
     try {
-      // Save photo to IndexedDB on the client side
-      await savePhoto('id_card_photo', photoBase64);
+      if (photoBase64) {
+        // Save photo to IndexedDB on the client side
+        await savePhoto('id_card_photo', photoBase64);
+      }
 
       const formData = new FormData();
       formData.append('nama', nama);
@@ -211,7 +212,7 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
       formData.append('jabatan', jabatan);
       formData.append('departemen', departemen);
       formData.append('theme', theme);
-      formData.append('hasPhoto', 'true');
+      formData.append('hasPhoto', photoBase64 ? 'true' : 'false');
 
       const result = await saveSessionAction(formData);
       
@@ -266,7 +267,7 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
           <div className="space-y-5">
             <div className="space-y-2">
               <label htmlFor="nama" className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
-                Nama Lengkap <span className="text-red-500">*</span>
+                Nama Lengkap
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -279,14 +280,13 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
                   onChange={(e) => setNama(e.target.value)}
                   placeholder="Contoh: John Doe"
                   className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-sm text-slate-900 placeholder-slate-400 transition outline-none shadow-inner"
-                  required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="nik" className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
-                Nomor Induk Karyawan (NIK) <span className="text-red-500">*</span>
+                Nomor Induk Karyawan (NIK)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -304,7 +304,6 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
                   maxLength={20}
                   placeholder="Contoh: 123/23/20"
                   className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-xl text-sm text-slate-900 placeholder-slate-400 transition outline-none font-mono shadow-inner"
-                  required
                 />
               </div>
               <p className="text-[10px] text-slate-500 font-mono">Input berupa angka dan garis miring (/) (Maks. 20 karakter)</p>

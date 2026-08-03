@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import html2canvas from 'html2canvas-pro';
 import { useQZTray } from '../hooks/useQZTray';
 import {
@@ -26,6 +26,14 @@ export default function QZPrinterControl({
   cardBackElementId = 'id-card-back',
   onPrintSuccess
 }: QZPrinterControlProps) {
+  const CR80_WIDTH_MM = 53.98;
+  const CR80_HEIGHT_MM = 85.60;
+  const CR80_RATIO = CR80_WIDTH_MM / CR80_HEIGHT_MM;
+  const DEFAULT_HORIZONTAL_BLEED_MM = 0.8;
+  const DEFAULT_VERTICAL_BLEED_MM = 0.8;
+  const MAX_VERTICAL_NUDGE_MM = 0.6;
+  const MAX_HORIZONTAL_NUDGE_MM = 0.8;
+
   const {
     state,
     printers,
@@ -42,6 +50,101 @@ export default function QZPrinterControl({
   } = useQZTray();
 
   const [printingSide, setPrintingSide] = useState<'front' | 'back' | 'both' | null>(null);
+  const [verticalNudgeMm, setVerticalNudgeMm] = useState<number>(0);
+  const [horizontalNudgeMm, setHorizontalNudgeMm] = useState<number>(0);
+  const [horizontalBleedMm, setHorizontalBleedMm] = useState<number>(DEFAULT_HORIZONTAL_BLEED_MM);
+  const [verticalBleedMm, setVerticalBleedMm] = useState<number>(DEFAULT_VERTICAL_BLEED_MM);
+  const STORAGE_KEY = 'idcard_printer_calibration_v1';
+
+  // Load saved calibration for selected printer
+  useEffect(() => {
+    if (!selectedPrinter) return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw || '{}');
+      const cfg = parsed[selectedPrinter];
+      if (!cfg) return;
+      if (typeof cfg.hNudge === 'number') setHorizontalNudgeMm(cfg.hNudge);
+      if (typeof cfg.vNudge === 'number') setVerticalNudgeMm(cfg.vNudge);
+      if (typeof cfg.hBleed === 'number') setHorizontalBleedMm(cfg.hBleed);
+      if (typeof cfg.vBleed === 'number') setVerticalBleedMm(cfg.vBleed);
+    } catch (e) {
+      // ignore
+    }
+  }, [selectedPrinter]);
+
+  // Persist calibration whenever values change for the selected printer
+  useEffect(() => {
+    if (!selectedPrinter) return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY) || '{}';
+      const parsed = JSON.parse(raw);
+      parsed[selectedPrinter] = {
+        hNudge: horizontalNudgeMm,
+        vNudge: verticalNudgeMm,
+        hBleed: horizontalBleedMm,
+        vBleed: verticalBleedMm,
+        savedAt: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    } catch (e) {
+      // ignore
+    }
+  }, [selectedPrinter, horizontalNudgeMm, verticalNudgeMm, horizontalBleedMm, verticalBleedMm]);
+
+  const normalizeCanvasToCardAspect = (source: HTMLCanvasElement): HTMLCanvasElement => {
+    const srcW = source.width;
+    const srcH = source.height;
+    const srcRatio = srcW / srcH;
+
+    let cropW = srcW;
+    let cropH = srcH;
+    let cropX = 0;
+    let cropY = 0;
+
+    // Center-crop to CR-80 ratio so printer doesn't add white bars on fit-to-page.
+    if (srcRatio > CR80_RATIO) {
+      cropW = Math.round(srcH * CR80_RATIO);
+      cropX = Math.round((srcW - cropW) / 2);
+    } else if (srcRatio < CR80_RATIO) {
+      cropH = Math.round(srcW / CR80_RATIO);
+      cropY = Math.round((srcH - cropH) / 2);
+    }
+
+    // Render to exact 300 DPI CR-80 pixels.
+    const targetW = Math.round((CR80_WIDTH_MM / 25.4) * 300);
+    const targetH = Math.round((CR80_HEIGHT_MM / 25.4) * 300);
+    const bleedXPx = Math.round((horizontalBleedMm / 25.4) * 300);
+    const bleedYPx = Math.round((verticalBleedMm / 25.4) * 300);
+    const requestedYNudgePx = Math.round((verticalNudgeMm / 25.4) * 300);
+    const nudgeYPx = Math.max(-bleedYPx, Math.min(bleedYPx, requestedYNudgePx));
+    const requestedXNudgePx = Math.round((horizontalNudgeMm / 25.4) * 300);
+    const nudgeXPx = Math.max(-bleedXPx, Math.min(bleedXPx, requestedXNudgePx));
+    const out = document.createElement('canvas');
+    out.width = targetW;
+    out.height = targetH;
+
+    const ctx = out.getContext('2d');
+    if (!ctx) return source;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    // Apply controlled overscan and vertical nudge for printer-specific calibration.
+    ctx.drawImage(
+      source,
+      cropX,
+      cropY,
+      cropW,
+      cropH,
+      -bleedXPx + nudgeXPx,
+      -bleedYPx + nudgeYPx,
+      targetW + bleedXPx * 2,
+      targetH + bleedYPx * 2
+    );
+
+    return out;
+  };
 
   /**
    * Converts targeted HTML element to Base64 PNG image string at 300 DPI for Fargo printer
@@ -52,15 +155,22 @@ export default function QZPrinterControl({
       throw new Error(`Elemen HTML "#${elementId}" tidak ditemukan.`);
     }
 
+    // Prefer capturing the exact card node to avoid wrapper whitespace.
+    const cardNode = (element.querySelector('.id-card-render') as HTMLElement | null) || element;
+    const rect = cardNode.getBoundingClientRect();
+
     // Capture HTML node as high-DPI canvas (300 DPI scaling = 3.175)
-    const canvas = await html2canvas(element, {
+    const canvas = await html2canvas(cardNode, {
       scale: 3.175,
       useCORS: true,
       backgroundColor: null,
-      logging: false
+      logging: false,
+      width: Math.ceil(rect.width),
+      height: Math.ceil(rect.height),
     });
 
-    return canvas.toDataURL('image/png');
+    const normalized = normalizeCanvasToCardAspect(canvas);
+    return normalized.toDataURL('image/png');
   };
 
   /**
@@ -233,6 +343,93 @@ export default function QZPrinterControl({
           </button>
         </div>
       </div>
+
+      {/* Vertical Alignment Calibration */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+            Kalibrasi Posisi Vertikal
+          </label>
+          <button
+            type="button"
+            onClick={() => setVerticalNudgeMm(0)}
+            className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-700 transition"
+          >
+            Reset
+          </button>
+        </div>
+        <div className="text-[11px] text-slate-600 leading-relaxed">
+          Geser hasil cetak sedikit ke atas atau ke bawah. Nilai plus menggeser ke bawah, nilai minus menggeser ke atas.
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-semibold text-slate-500 w-14">Atas</span>
+          <input
+            type="range"
+            min={-MAX_VERTICAL_NUDGE_MM}
+            max={MAX_VERTICAL_NUDGE_MM}
+            step={0.05}
+            value={verticalNudgeMm}
+            onChange={(e) => setVerticalNudgeMm(Number(e.target.value))}
+            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+          <span className="text-[10px] font-semibold text-slate-500 w-14 text-right">Bawah</span>
+        </div>
+        <div className="text-[11px] font-mono text-slate-700">
+          Offset Y: {verticalNudgeMm.toFixed(2)} mm
+        </div>
+      </div>
+
+        {/* Horizontal Alignment & Bleed Calibration */}
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+              Kalibrasi Posisi Horizontal
+            </label>
+            <button
+              type="button"
+              onClick={() => setHorizontalNudgeMm(0)}
+              className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-700 transition"
+            >
+              Reset
+            </button>
+          </div>
+          <div className="text-[11px] text-slate-600 leading-relaxed">
+            Geser hasil cetak sedikit ke kiri atau kanan. Nilai plus menggeser ke kanan, nilai minus menggeser ke kiri.
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-semibold text-slate-500 w-14">Kiri</span>
+            <input
+              type="range"
+              min={-MAX_HORIZONTAL_NUDGE_MM}
+              max={MAX_HORIZONTAL_NUDGE_MM}
+              step={0.05}
+              value={horizontalNudgeMm}
+              onChange={(e) => setHorizontalNudgeMm(Number(e.target.value))}
+              className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+            />
+            <span className="text-[10px] font-semibold text-slate-500 w-14 text-right">Kanan</span>
+          </div>
+          <div className="text-[11px] font-mono text-slate-700">Offset X: {horizontalNudgeMm.toFixed(2)} mm</div>
+
+          <div className="pt-2">
+            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Bleed (Horizontal)</label>
+            <div className="text-[11px] text-slate-600 leading-relaxed">Tambahkan bleed jika kartu tidak ter-cover penuh pada tepi.</div>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-[10px] font-semibold text-slate-500 w-14">Min</span>
+              <input
+                type="range"
+                min={0}
+                max={2}
+                step={0.05}
+                value={horizontalBleedMm}
+                onChange={(e) => setHorizontalBleedMm(Number(e.target.value))}
+                className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              />
+              <span className="text-[10px] font-semibold text-slate-500 w-14 text-right">Max</span>
+            </div>
+            <div className="text-[11px] font-mono text-slate-700 mt-1">Bleed: {horizontalBleedMm.toFixed(2)} mm</div>
+          </div>
+        </div>
 
       {/* Error Notification Toast */}
       {error && (
