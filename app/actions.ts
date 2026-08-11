@@ -11,6 +11,7 @@ export interface IDCardSession {
   departemen: string;
   theme: string;
   photoUrl: string;
+  barcode: string;
 }
 
 export async function getSession(): Promise<IDCardSession | null> {
@@ -34,6 +35,7 @@ export async function saveSessionAction(formData: FormData) {
   const departemen = formData.get('departemen') as string;
   const theme = formData.get('theme') as string;
   const hasPhoto = formData.get('hasPhoto') as string; // 'true' or 'false'
+  const barcode = formData.get('barcode') as string;
 
   // Retrieve or create sessionId
   const existingSession = await getSession();
@@ -55,6 +57,7 @@ export async function saveSessionAction(formData: FormData) {
     departemen: departemen || '',
     theme: theme || 'modern-blue',
     photoUrl,
+    barcode: barcode || '',
   };
 
   const cookieStore = await cookies();

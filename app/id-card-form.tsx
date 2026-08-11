@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Upload, 
@@ -12,10 +12,11 @@ import {
   Layers, 
   AlertCircle,
   FileImage,
-  ArrowRight
+  ArrowRight,
+  Barcode as BarcodeIcon
 } from 'lucide-react';
 import { saveSessionAction } from './actions';
-import { savePhoto } from './db';
+import { savePhoto, getPhoto, deletePhoto } from './db';
 import IDCardCropper from './id-card-cropper';
 
 const resizeImage = (base64Str: string, maxWidth = 800, maxHeight = 800): Promise<string> => {
@@ -125,6 +126,10 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
   const [nik, setNik] = useState('');
   const [jabatan, setJabatan] = useState('');
   const [departemen, setDepartemen] = useState(defaultUnit || '');
+  const [barcodeFile, setBarcodeFile] = useState<File | null>(null);
+  const [barcodeBase64, setBarcodeBase64] = useState<string | null>(null);
+  const barcodeFileInputRef = useRef<HTMLInputElement>(null);
+
   const [theme, setTheme] = useState('karya-bakti');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -132,6 +137,33 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getPhoto('id_card_barcode').then((base64) => {
+      if (base64) {
+        setBarcodeBase64(base64);
+      }
+    });
+  }, []);
+
+  const handleBarcodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (!file.type.startsWith('image/')) {
+        setError('File barcode harus berupa gambar (PNG/JPEG).');
+        return;
+      }
+      setError(null);
+      setBarcodeFile(file);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const result = reader.result as string;
+        setBarcodeBase64(result);
+        await savePhoto('id_card_barcode', result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -206,6 +238,10 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
         await savePhoto('id_card_photo', photoBase64);
       }
 
+      if (barcodeBase64) {
+        await savePhoto('id_card_barcode', barcodeBase64);
+      }
+
       const formData = new FormData();
       formData.append('nama', nama);
       formData.append('nik', nik);
@@ -213,6 +249,7 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
       formData.append('departemen', departemen);
       formData.append('theme', theme);
       formData.append('hasPhoto', photoBase64 ? 'true' : 'false');
+      formData.append('barcode', barcodeBase64 ? 'indexeddb' : '');
 
       const result = await saveSessionAction(formData);
       
@@ -307,6 +344,51 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
                 />
               </div>
               <p className="text-[10px] text-slate-500 font-mono">Input berupa angka dan garis miring (/) (Maks. 20 karakter)</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
+                Upload File Gambar Barcode (PNG / JPG)
+              </label>
+              <div className="flex items-center gap-3">
+                {barcodeBase64 ? (
+                  <div className="relative flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl w-full">
+                    <img 
+                      src={barcodeBase64} 
+                      alt="Barcode Preview" 
+                      className="w-10 h-16 object-contain bg-white rounded-lg border border-slate-200 p-1 shadow-xs"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 truncate">{barcodeFile?.name || 'File Barcode Ter-upload'}</p>
+                      <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">✓ Gambar barcode siap ditempel di kartu</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setBarcodeFile(null);
+                        setBarcodeBase64(null);
+                        await deletePhoto('id_card_barcode');
+                      }}
+                      className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                ) : (
+                  <label className="w-full flex items-center justify-center gap-2.5 px-4 py-3.5 bg-slate-50/70 hover:bg-slate-100/80 border border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl cursor-pointer transition text-slate-600 hover:text-indigo-600 shadow-xs">
+                    <Upload className="w-4 h-4 text-indigo-500" />
+                    <span className="text-xs font-semibold">Pilih File Gambar Barcode (PNG/JPG)</span>
+                    <input
+                      ref={barcodeFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBarcodeFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-500 font-mono">Upload file gambar barcode yang sudah jadi untuk ditempel di kartu (opsional)</p>
             </div>
 
             <div className="space-y-2">

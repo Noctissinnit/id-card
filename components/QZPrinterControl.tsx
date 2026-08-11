@@ -33,6 +33,10 @@ export default function QZPrinterControl({
   const DEFAULT_VERTICAL_BLEED_MM = 0.8;
   const MAX_VERTICAL_NUDGE_MM = 0.6;
   const MAX_HORIZONTAL_NUDGE_MM = 0.8;
+  // Asymmetric extras to help cover printer non-printable edges
+  const EXTRA_RIGHT_MM = 1.0; // extend drawing to the right by ~1mm
+  const EXTRA_BOTTOM_MM = 1.0; // extend drawing downward by ~1mm
+  const EXTRA_UP_SHIFT_MM = 1.0; // shift image up by ~1mm to compensate for bottom white strip
 
   const {
     state,
@@ -118,9 +122,13 @@ export default function QZPrinterControl({
     const bleedXPx = Math.round((horizontalBleedMm / 25.4) * 300);
     const bleedYPx = Math.round((verticalBleedMm / 25.4) * 300);
     const requestedYNudgePx = Math.round((verticalNudgeMm / 25.4) * 300);
-    const nudgeYPx = Math.max(-bleedYPx, Math.min(bleedYPx, requestedYNudgePx));
+    const extraUpPx = Math.round((EXTRA_UP_SHIFT_MM / 25.4) * 300);
+    // Apply extra up-shift (moves image up by EXTRA_UP_SHIFT_MM)
+    const nudgeYPx = Math.max(-bleedYPx, Math.min(bleedYPx, requestedYNudgePx - extraUpPx));
     const requestedXNudgePx = Math.round((horizontalNudgeMm / 25.4) * 300);
     const nudgeXPx = Math.max(-bleedXPx, Math.min(bleedXPx, requestedXNudgePx));
+    const extraRightPx = Math.round((EXTRA_RIGHT_MM / 25.4) * 300);
+    const extraBottomPx = Math.round((EXTRA_BOTTOM_MM / 25.4) * 300);
     const out = document.createElement('canvas');
     out.width = targetW;
     out.height = targetH;
@@ -128,9 +136,33 @@ export default function QZPrinterControl({
     const ctx = out.getContext('2d');
     if (!ctx) return source;
 
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    // Apply controlled overscan and vertical nudge for printer-specific calibration.
+    // Apply a rounded-rect clip (powerclip) so the image is constrained to the CR-80 frame
+    // Corner radius ~3.18mm (standard CR-80 corner radius)
+    const CORNER_RADIUS_MM = 3.18;
+    const cornerRadiusPx = Math.round((CORNER_RADIUS_MM / 25.4) * 300);
+
+    // Create rounded rect path that represents the visible card area
+    const rx = 0;
+    const ry = 0;
+    const rw = targetW;
+    const rh = targetH;
+    ctx.save();
+    ctx.beginPath();
+    // rounded rect path
+    ctx.moveTo(rx + cornerRadiusPx, ry);
+    ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, cornerRadiusPx);
+    ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, cornerRadiusPx);
+    ctx.arcTo(rx, ry + rh, rx, ry, cornerRadiusPx);
+    ctx.arcTo(rx, ry, rx + rw, ry, cornerRadiusPx);
+    ctx.closePath();
+    ctx.clip();
+
+    // Draw the source image with bleed and nudges; clip will keep it within the rounded card frame
     ctx.drawImage(
       source,
       cropX,
@@ -139,9 +171,11 @@ export default function QZPrinterControl({
       cropH,
       -bleedXPx + nudgeXPx,
       -bleedYPx + nudgeYPx,
-      targetW + bleedXPx * 2,
-      targetH + bleedYPx * 2
+      targetW + bleedXPx * 2 + extraRightPx,
+      targetH + bleedYPx * 2 + extraBottomPx
     );
+
+    ctx.restore();
 
     return out;
   };
@@ -150,23 +184,32 @@ export default function QZPrinterControl({
    * Converts targeted HTML element to Base64 PNG image string at 300 DPI for Fargo printer
    */
   const convertElementToBase64 = async (elementId: string): Promise<string> => {
-    const element = document.getElementById(elementId);
+    const element = document.getElementById(elementId) || document.getElementById('export-front-card');
     if (!element) {
       throw new Error(`Elemen HTML "#${elementId}" tidak ditemukan.`);
     }
 
-    // Prefer capturing the exact card node to avoid wrapper whitespace.
+    // Capture exact card node directly with onclone hook enforcing 330px x 515px relative container bounds
     const cardNode = (element.querySelector('.id-card-render') as HTMLElement | null) || element;
-    const rect = cardNode.getBoundingClientRect();
-
-    // Capture HTML node as high-DPI canvas (300 DPI scaling = 3.175)
+    
     const canvas = await html2canvas(cardNode, {
       scale: 3.175,
       useCORS: true,
-      backgroundColor: null,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
       logging: false,
-      width: Math.ceil(rect.width),
-      height: Math.ceil(rect.height),
+      width: 330,
+      height: 523,
+      onclone: (clonedDoc, clonedElement) => {
+        clonedElement.style.position = 'relative';
+        clonedElement.style.width = '330px';
+        clonedElement.style.height = '523px';
+        clonedElement.style.overflow = 'hidden';
+        clonedElement.style.transform = 'none';
+        clonedElement.style.margin = '0';
+        clonedElement.style.left = '0';
+        clonedElement.style.top = '0';
+      }
     });
 
     const normalized = normalizeCanvasToCardAspect(canvas);

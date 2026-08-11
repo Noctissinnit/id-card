@@ -24,56 +24,93 @@ import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
 import { getPhoto, deletePhoto } from './db';
 import QZPrinterControl from '../components/QZPrinterControl';
+import JsBarcode from 'jsbarcode';
 
-// Helper to format name if it has more than 1 word
-export function formatNameLines(name: string): string {
+// Helper to format name with a maximum of 2 words per line before moving to the next line
+export function formatNameLines(name: string, maxWordsPerLine: number = 2): string {
   if (!name) return '';
   const words = name.trim().split(/\s+/);
-  if (words.length <= 1) {
+  if (words.length <= maxWordsPerLine) {
     return name;
   }
-  const firstLine = words[0];
-  const secondLine = words.slice(1).join(' ');
-  return `${firstLine}\n${secondLine}`;
+  const lines: string[] = [];
+  for (let i = 0; i < words.length; i += maxWordsPerLine) {
+    lines.push(words.slice(i, i + maxWordsPerLine).join(' '));
+  }
+  return lines.join('\n');
 }
 
-// Dynamic SVG Barcode Generator
-const Barcode = ({ value }: { value: string }) => {
-  const lines = [];
-  let currentX = 10;
-  const barcodeVal = value || '1234567890';
-  
-  for (let i = 0; i < barcodeVal.length; i++) {
-    const charCode = barcodeVal.charCodeAt(i);
-    const binary = charCode.toString(2).padStart(7, '0');
-    for (const bit of binary) {
-      const width = bit === '1' ? 3 : 1;
-      lines.push(
-        <rect 
-          key={`${i}-${currentX}`} 
-          x={currentX} 
-          y={2} 
-          width={width} 
-          height={36} 
-          fill="currentColor" 
-        />
-      );
-      currentX += width + 1;
+// Dynamic Barcode Generator (Renders 90° rotated vertical PNG image directly on 2D Canvas)
+// Eliminates CSS transform flattening bugs in browser print engines (Chrome/Edge @media print)
+const Barcode = ({ 
+  value, 
+  width = '48px', 
+  height = '250px', 
+  color = '#000000' 
+}: { 
+  value: string; 
+  width?: string; 
+  height?: string; 
+  color?: string; 
+}) => {
+  const [imgUrl, setImgUrl] = useState<string>('');
+
+  useEffect(() => {
+    try {
+      const tempCanvas = document.createElement('canvas');
+      JsBarcode(tempCanvas, value || '1234567890', {
+        format: 'CODE128',
+        displayValue: false,
+        margin: 0,
+        height: 60,
+        width: 2,
+        background: 'transparent',
+        lineColor: color || '#000000',
+      });
+
+      // Rotate 90 degrees CW onto a vertical canvas
+      const vertCanvas = document.createElement('canvas');
+      vertCanvas.width = tempCanvas.height;
+      vertCanvas.height = tempCanvas.width;
+
+      const ctx = vertCanvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, vertCanvas.width, vertCanvas.height);
+        
+        ctx.translate(vertCanvas.width, 0);
+        ctx.rotate((90 * Math.PI) / 180);
+        ctx.drawImage(tempCanvas, 0, 0);
+      }
+
+      setImgUrl(vertCanvas.toDataURL('image/png'));
+    } catch (err) {
+      console.error('Barcode rendering error:', err);
     }
-  }
-  
+  }, [value, color]);
+
   return (
-    <div className="flex flex-col items-center w-full">
-      <svg 
-        width="100%" 
-        height="40" 
-        viewBox={`0 0 ${currentX + 10} 40`} 
-        preserveAspectRatio="none" 
-        className="text-current"
-      >
-        {lines}
-      </svg>
-      <span className="text-[9px] tracking-[4px] mt-1 font-mono uppercase opacity-80">{barcodeVal}</span>
+    <div 
+      style={{
+        width: width,
+        height: height,
+        display: 'block',
+        boxSizing: 'border-box'
+      }}
+    >
+      {imgUrl ? (
+        <img 
+          src={imgUrl} 
+          alt="Barcode" 
+          style={{
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            objectFit: 'fill'
+          }}
+        />
+      ) : (
+        <div style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }} />
+      )}
     </div>
   );
 };
@@ -196,71 +233,71 @@ const THEMES: Record<string, ThemeConfig> = {
     fontFamily: 'font-sans',
     photoBorder: 'border-4 border-white rounded-full shadow-lg'
   },
-  'cyberpunk': {
-    name: 'Cyberpunk Neon',
-    cardBg: 'bg-zinc-950 border border-pink-500/50 shadow-[0_0_15px_rgba(236,72,153,0.3)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-zinc-950 to-zinc-950',
-    textPrimary: 'text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 font-mono tracking-tight font-extrabold',
-    textSecondary: 'text-cyan-400 font-mono uppercase text-xs tracking-wider',
-    accent: 'text-yellow-400 font-mono',
-    badgeBg: 'bg-yellow-400/10 border border-yellow-400/40',
-    badgeText: 'text-yellow-400 font-mono text-[10px]',
-    glow: 'shadow-[0_0_20px_rgba(6,182,212,0.4)]',
-    logoColor: 'text-pink-500',
-    fontFamily: 'font-mono',
-    photoBorder: 'border-2 border-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)] rounded-none rotate-3'
-  },
-  'neon-emerald': {
-    name: 'Matrix Emerald',
-    cardBg: 'bg-black border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black',
-    textPrimary: 'text-emerald-400 font-mono tracking-wide font-bold uppercase',
-    textSecondary: 'text-zinc-400 font-mono text-xs',
-    accent: 'text-emerald-500 font-mono',
-    badgeBg: 'bg-emerald-500/15 border border-emerald-500/30',
-    badgeText: 'text-emerald-400 font-mono text-[10px]',
-    glow: 'shadow-[0_0_15px_rgba(16,185,129,0.3)]',
-    logoColor: 'text-emerald-400',
-    fontFamily: 'font-mono',
-    photoBorder: 'border-2 border-emerald-500 rounded-md shadow-[0_0_8px_rgba(16,185,129,0.4)]'
-  },
-  'minimal-dark': {
-    name: 'Obsidian Dark',
-    cardBg: 'bg-zinc-950 border border-zinc-800 shadow-2xl bg-gradient-to-b from-zinc-900 to-zinc-950',
-    textPrimary: 'text-zinc-100 font-sans tracking-tight font-semibold',
-    textSecondary: 'text-zinc-500 font-sans text-xs',
-    accent: 'text-zinc-300 font-sans',
-    badgeBg: 'bg-zinc-800/80 border border-zinc-700',
-    badgeText: 'text-zinc-200 font-sans text-[10px] font-medium',
-    glow: 'shadow-lg',
-    logoColor: 'text-zinc-100',
-    fontFamily: 'font-sans',
-    photoBorder: 'border border-zinc-750 rounded-xl shadow-inner'
-  },
-  'aurora-teal': {
-    name: 'Aurora Teal',
-    cardBg: 'bg-slate-950 border border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.15)] bg-[radial-gradient(circle_at_30%_30%,rgba(20,184,166,0.15),transparent_50%)] bg-[radial-gradient(circle_at_70%_70%,rgba(168,85,247,0.1),transparent_50%)]',
-    textPrimary: 'text-white font-sans tracking-tight font-bold',
-    textSecondary: 'text-teal-400 font-sans text-xs font-semibold uppercase tracking-wider',
-    accent: 'text-indigo-300 font-sans',
-    badgeBg: 'bg-gradient-to-r from-teal-500/10 to-indigo-500/10 border border-teal-500/30',
-    badgeText: 'text-teal-300 font-sans text-[10px] font-medium',
-    glow: 'shadow-[0_0_15px_rgba(20,184,166,0.25)]',
-    logoColor: 'text-teal-400',
-    fontFamily: 'font-sans',
-    photoBorder: 'border-2 border-transparent bg-gradient-to-r from-teal-400 to-indigo-500 [background-clip:padding-box,_border-box] rounded-2xl shadow-md'
-  },
-  'luxury-gold': {
-    name: 'Luxury Gold',
-    cardBg: 'bg-neutral-950 border border-amber-600/30 shadow-[0_0_20px_rgba(217,119,6,0.15)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-950/20 via-neutral-950 to-neutral-950',
-    textPrimary: 'text-amber-400 font-serif tracking-wide font-bold italic',
-    textSecondary: 'text-neutral-400 font-sans text-xs uppercase tracking-widest',
-    accent: 'text-amber-500 font-sans',
-    badgeBg: 'bg-amber-500/10 border border-amber-500/30',
-    badgeText: 'text-amber-400 font-sans text-[10px] uppercase font-bold tracking-wider',
-    glow: 'shadow-[0_0_15px_rgba(217,119,6,0.25)]',
-    logoColor: 'text-amber-500',
-    fontFamily: 'font-serif',
-    photoBorder: 'border-2 border-amber-600/50 p-0.5 rounded-none shadow-md'
-  }
+  // 'cyberpunk': {
+  //   name: 'Cyberpunk Neon',
+  //   cardBg: 'bg-zinc-950 border border-pink-500/50 shadow-[0_0_15px_rgba(236,72,153,0.3)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950 via-zinc-950 to-zinc-950',
+  //   textPrimary: 'text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400 font-mono tracking-tight font-extrabold',
+  //   textSecondary: 'text-cyan-400 font-mono uppercase text-xs tracking-wider',
+  //   accent: 'text-yellow-400 font-mono',
+  //   badgeBg: 'bg-yellow-400/10 border border-yellow-400/40',
+  //   badgeText: 'text-yellow-400 font-mono text-[10px]',
+  //   glow: 'shadow-[0_0_20px_rgba(6,182,212,0.4)]',
+  //   logoColor: 'text-pink-500',
+  //   fontFamily: 'font-mono',
+  //   photoBorder: 'border-2 border-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)] rounded-none rotate-3'
+  // },
+  // 'neon-emerald': {
+  //   name: 'Matrix Emerald',
+  //   cardBg: 'bg-black border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)] bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black',
+  //   textPrimary: 'text-emerald-400 font-mono tracking-wide font-bold uppercase',
+  //   textSecondary: 'text-zinc-400 font-mono text-xs',
+  //   accent: 'text-emerald-500 font-mono',
+  //   badgeBg: 'bg-emerald-500/15 border border-emerald-500/30',
+  //   badgeText: 'text-emerald-400 font-mono text-[10px]',
+  //   glow: 'shadow-[0_0_15px_rgba(16,185,129,0.3)]',
+  //   logoColor: 'text-emerald-400',
+  //   fontFamily: 'font-mono',
+  //   photoBorder: 'border-2 border-emerald-500 rounded-md shadow-[0_0_8px_rgba(16,185,129,0.4)]'
+  // },
+  // 'minimal-dark': {
+  //   name: 'Obsidian Dark',
+  //   cardBg: 'bg-zinc-950 border border-zinc-800 shadow-2xl bg-gradient-to-b from-zinc-900 to-zinc-950',
+  //   textPrimary: 'text-zinc-100 font-sans tracking-tight font-semibold',
+  //   textSecondary: 'text-zinc-500 font-sans text-xs',
+  //   accent: 'text-zinc-300 font-sans',
+  //   badgeBg: 'bg-zinc-800/80 border border-zinc-700',
+  //   badgeText: 'text-zinc-200 font-sans text-[10px] font-medium',
+  //   glow: 'shadow-lg',
+  //   logoColor: 'text-zinc-100',
+  //   fontFamily: 'font-sans',
+  //   photoBorder: 'border border-zinc-750 rounded-xl shadow-inner'
+  // },
+  // 'aurora-teal': {
+  //   name: 'Aurora Teal',
+  //   cardBg: 'bg-slate-950 border border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.15)] bg-[radial-gradient(circle_at_30%_30%,rgba(20,184,166,0.15),transparent_50%)] bg-[radial-gradient(circle_at_70%_70%,rgba(168,85,247,0.1),transparent_50%)]',
+  //   textPrimary: 'text-white font-sans tracking-tight font-bold',
+  //   textSecondary: 'text-teal-400 font-sans text-xs font-semibold uppercase tracking-wider',
+  //   accent: 'text-indigo-300 font-sans',
+  //   badgeBg: 'bg-gradient-to-r from-teal-500/10 to-indigo-500/10 border border-teal-500/30',
+  //   badgeText: 'text-teal-300 font-sans text-[10px] font-medium',
+  //   glow: 'shadow-[0_0_15px_rgba(20,184,166,0.25)]',
+  //   logoColor: 'text-teal-400',
+  //   fontFamily: 'font-sans',
+  //   photoBorder: 'border-2 border-transparent bg-gradient-to-r from-teal-400 to-indigo-500 [background-clip:padding-box,_border-box] rounded-2xl shadow-md'
+  // },
+  // 'luxury-gold': {
+  //   name: 'Luxury Gold',
+  //   cardBg: 'bg-neutral-950 border border-amber-600/30 shadow-[0_0_20px_rgba(217,119,6,0.15)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-950/20 via-neutral-950 to-neutral-950',
+  //   textPrimary: 'text-amber-400 font-serif tracking-wide font-bold italic',
+  //   textSecondary: 'text-neutral-400 font-sans text-xs uppercase tracking-widest',
+  //   accent: 'text-amber-500 font-sans',
+  //   badgeBg: 'bg-amber-500/10 border border-amber-500/30',
+  //   badgeText: 'text-amber-400 font-sans text-[10px] uppercase font-bold tracking-wider',
+  //   glow: 'shadow-[0_0_15px_rgba(217,119,6,0.25)]',
+  //   logoColor: 'text-amber-500',
+  //   fontFamily: 'font-serif',
+  //   photoBorder: 'border-2 border-amber-600/50 p-0.5 rounded-none shadow-md'
+  // }
 };
 
 interface IDCardPreviewProps {
@@ -278,6 +315,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   const router = useRouter();
   const [isFlipped, setIsFlipped] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string>('');
+  const [barcodeUrl, setBarcodeUrl] = useState<string>('');
+  const [downloading, setDownloading] = useState(false);
+
+  const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase();
+  const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik');
 
   useEffect(() => {
     if (data.photoUrl === 'indexeddb') {
@@ -289,21 +331,147 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     } else {
       setPhotoUrl(data.photoUrl);
     }
-  }, [data.photoUrl]);
+
+    if (data.barcode === 'indexeddb') {
+      getPhoto('id_card_barcode').then((base64) => {
+        if (base64) {
+          setBarcodeUrl(base64);
+        }
+      });
+    } else {
+      setBarcodeUrl(data.barcode);
+    }
+  }, [data.photoUrl, data.barcode]);
   
   const handleReset = async () => {
     await deletePhoto('id_card_photo');
+    await deletePhoto('id_card_barcode');
     await clearSessionAction();
     router.refresh();
   };
-  const [downloading, setDownloading] = useState(false);
-  const [printTarget, setPrintTarget] = useState<'front' | 'back' | 'both'>('both');
+  const captureCardCanvasToDataURL = async (sourceElement: HTMLElement): Promise<string> => {
+    const cardRender = (sourceElement.querySelector('.id-card-render') as HTMLElement | null) || sourceElement;
+    
+    // Capture the exact card node on screen with onclone hook enforcing 330px x 515px relative container bounds
+    const canvas = await html2canvas(cardRender, {
+      scale: 3.175,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width: 330,
+      height: 523,
+      onclone: (clonedDoc, clonedElement) => {
+        clonedElement.style.position = 'relative';
+        clonedElement.style.width = '330px';
+        clonedElement.style.height = '523px';
+        clonedElement.style.overflow = 'hidden';
+        clonedElement.style.transform = 'none';
+        clonedElement.style.margin = '0';
+        clonedElement.style.left = '0';
+        clonedElement.style.top = '0';
+      }
+    });
 
-  const triggerPrint = (target: 'front' | 'back' | 'both') => {
-    setPrintTarget(target);
-    setTimeout(() => {
-      window.print();
-    }, 500);
+    return canvas.toDataURL('image/png');
+  };
+
+  const triggerPrint = async (target: 'front' | 'back' | 'both') => {
+    // Open print window synchronously on user click to prevent Chrome popup blocker
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      alert('Pop-up terblokir oleh browser. Harap izinkan pop-up untuk situs ini agar dapat mencetak kartu.');
+      return;
+    }
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Menyiapkan Cetakan...</title>
+          <style>
+            body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #ffffff; color: #334155; }
+            .loader { text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="loader">
+            <h3 style="margin-bottom:8px;">Menyiapkan Dokumen Cetak...</h3>
+            <p style="font-size:12px;color:#64748b;margin:0;">Mohon tunggu sebentar, sedang memproses gambar HD.</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+    setDownloading(true);
+    try {
+      const images: string[] = [];
+
+      if (target === 'front' || target === 'both') {
+        const frontNode = visibleFrontRef.current || exportFrontRef.current;
+        if (frontNode) {
+          const imgData = await captureCardCanvasToDataURL(frontNode);
+          images.push(imgData);
+        }
+      }
+
+      if (target === 'back' || target === 'both') {
+        const backNode = exportBackRef.current || visibleFrontRef.current;
+        if (backNode) {
+          const imgData = await captureCardCanvasToDataURL(backNode);
+          images.push(imgData);
+        }
+      }
+
+      if (images.length === 0) {
+        printWin.close();
+        alert('Gagal mengambil gambar kartu.');
+        return;
+      }
+
+      printWin.document.open();
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Print ID Card</title>
+            <style>
+              @page { size: 53.98mm 85.60mm; margin: 0; }
+              html, body { margin: 0; padding: 0; width: 53.98mm; height: 85.60mm; background: #ffffff; }
+              .card-page { width: 53.98mm; height: 85.60mm; page-break-after: always; break-after: page; overflow: hidden; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; }
+              img { width: 100%; height: 100%; object-fit: fill; display: block; border: none; margin: 0; padding: 0; }
+            </style>
+          </head>
+          <body>
+            ${images.map(img => `<div class="card-page"><img src="${img}" id="card-img" /></div>`).join('')}
+            <script>
+              function startPrint() {
+                setTimeout(function() {
+                  window.focus();
+                  window.print();
+                  setTimeout(function() { window.close(); }, 500);
+                }, 400);
+              }
+
+              var img = document.getElementById('card-img');
+              if (img && !img.complete) {
+                img.onload = startPrint;
+                setTimeout(startPrint, 1000);
+              } else {
+                startPrint();
+              }
+            </script>
+          </body>
+        </html>
+      `);
+      printWin.document.close();
+    } catch (err) {
+      console.error('Print error:', err);
+      printWin.close();
+      alert('Gagal menyiapkan dokumen cetak.');
+    } finally {
+      setDownloading(false);
+    }
   };
   const cardRef = useRef<HTMLDivElement>(null);
   const visibleFrontRef = useRef<HTMLDivElement>(null);
@@ -385,7 +553,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
   // ID Card Front Template
   const CardFront = ({ isExport = false }: { isExport?: boolean }) => {
-    if (customTemplate?.card_design) {
+    if (customTemplate?.card_design || customTemplate?.layout_config) {
       // Parse custom layout configuration
       let config: any = null
       if (customTemplate.layout_config) {
@@ -429,42 +597,79 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const showNama = config?.show_nama !== undefined ? !!config.show_nama : true
       const showPhoto = config?.show_photo !== undefined ? !!config.show_photo : true
 
+      const showBarcode = config?.show_barcode !== undefined ? !!config.show_barcode : true
+
+      // Barcode positioning & styling
+      const posBarcode = config?.barcode_top !== undefined ? `${config.barcode_top}%` : '10%'
+      const posBarcodeLeft = config?.barcode_left !== undefined ? `${config.barcode_left}%` : '75%'
+      const barcodeRawW = config?.barcode_width !== undefined ? Math.round(Number(config.barcode_width) * SCALE) : 48
+      const barcodeRawH = config?.barcode_height !== undefined ? Math.round(Number(config.barcode_height) * SCALE) : 210
+      const barcodeW = `${barcodeRawW}px`
+      const barcodeH = `${barcodeRawH}px`
+      const barcodeRotation = config?.barcode_rotation !== undefined ? Number(config.barcode_rotation) : 0
+      const barcodeColor = config?.barcode_color ? config.barcode_color : '#000000'
+
+      // Smart Card Chip Slot (ISO 7816-2 Area)
+      const showChip = config?.show_chip !== undefined ? !!config.show_chip : false
+      const posChipTop = config?.chip_top !== undefined ? `${config.chip_top}%` : '20%'
+      const posChipLeft = config?.chip_left !== undefined ? `${config.chip_left}%` : '68%'
+      const chipRawW = config?.chip_width !== undefined ? Math.round(Number(config.chip_width) * SCALE) : 52
+      const chipRawH = config?.chip_height !== undefined ? Math.round(Number(config.chip_height) * SCALE) : 44
+      const chipW = `${chipRawW}px`
+      const chipH = `${chipRawH}px`
+
+      // Footer Logo (Politeknik ATMI & Flazz) positioning - only for Poltek/Politeknik units
+      const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
+      const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
+      const showFooterLogo = isPoltekUnit ? (config?.show_footer_logo !== undefined ? !!config.show_footer_logo : true) : false
+      const posFooterLogoTop = config?.footer_logo_top !== undefined ? `${config.footer_logo_top}%` : '77%'
+      const posFooterLogoLeft = config?.footer_logo_left !== undefined ? `${config.footer_logo_left}%` : '0%'
+      const footerLogoRawW = config?.footer_logo_width !== undefined ? Math.round(Number(config.footer_logo_width) * SCALE) : 320
+      const footerLogoRawH = config?.footer_logo_height !== undefined ? Math.round(Number(config.footer_logo_height) * SCALE) : 74
+      const footerLogoW = `${footerLogoRawW}px`
+      const footerLogoH = `${footerLogoRawH}px`
+      const footerLogoBg = config?.footer_logo_bg !== undefined ? config.footer_logo_bg : 'transparent'
+      const footerLogoUrl = config?.footer_logo_url || '/img/atmidanflazz.png'
+
       // Colors mapping (respect exact chosen colors from unit layout_config)
       const jabatanColor = config?.jabatan_color ? config.jabatan_color : '#facc15'
       const nikColor = config?.nik_color ? config.nik_color : '#ffffff'
       const namaColor = config?.nama_color ? config.nama_color : '#ffffff'
 
       // Scaled element dimensions (editor pixels × SCALE)
-      // Editor: text width=216, jabatan h=24, nik h=18, nama h=35
-      const textWidth = Math.round(216 * SCALE)   // 288
+      // Editor: text width=185 (when barcode shown) / 216, jabatan h=24, nik h=18, nama h=35
+      const textWidth = showBarcode ? Math.round(185 * SCALE) : Math.round(216 * SCALE)   // 246px max when barcode present
       const jabatanH = Math.round(24 * SCALE)      // 32
       const nikH = Math.round(18 * SCALE)           // 24
       const namaH = Math.round(35 * SCALE)          // 47
 
       return (
         <div 
-          className="w-[330px] h-[515px] id-card-render relative overflow-hidden shrink-0 select-none bg-white"
+          className="w-[330px] h-[523px] id-card-render relative overflow-hidden shrink-0 select-none bg-white"
           style={{
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
             borderRadius: isExport ? '0px' : '16px',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            backgroundColor: config?.card_bg_color === 'transparent' ? 'transparent' : (config?.card_bg_color || '#ffffff')
           }}
         >
           {/* Background Image Template */}
-          <img 
-            src={customTemplate.card_design} 
-            alt="Card Template" 
-            crossOrigin="anonymous"
-            style={{
-              position: 'absolute',
-              top: '0',
-              left: '0',
-              width: '100%',
-              height: '100%',
-              objectFit: 'fill',
-              zIndex: 0
-            }}
-          />
+          {customTemplate.card_design && (
+            <img 
+              src={customTemplate.card_design} 
+              alt="Card Template" 
+              crossOrigin="anonymous"
+              style={{
+                position: 'absolute',
+                top: '0',
+                left: '0',
+                width: '100%',
+                height: '100%',
+                objectFit: 'fill',
+                zIndex: 0
+              }}
+            />
+          )}
 
           {/* Jabatan */}
           {showJabatan && (
@@ -484,7 +689,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             >
               <span
                 style={{
-                  fontFamily: 'sans-serif',
+                  fontFamily: config?.jabatan_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                   fontWeight: config?.jabatan_weight || '900',
                   fontSize: `${Math.round(Number(config?.jabatan_size || 11) * SCALE)}px`,
                   color: jabatanColor,
@@ -521,7 +726,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             >
               <span
                 style={{
-                  fontFamily: "'Lato', sans-serif",
+                  fontFamily: config?.nik_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                   fontWeight: config?.nik_weight || '400',
                   fontSize: `${Math.round(Number(config?.nik_size || 10) * SCALE)}px`,
                   color: nikColor,
@@ -529,14 +734,14 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   textAlign: config?.nik_align || 'center'
                 }}
               >
-                {data.nik ? `NIK. ${data.nik}` : (isExport ? '' : 'NIK. 690/03/05')}
+                {isPoltekUnit ? (data.nik || (isExport ? '' : '690/03/05')) : (data.nik ? `NIK. ${data.nik}` : (isExport ? '' : 'NIK. 690/03/05'))}
               </span>
             </div>
           )}
 
           {/* Photo Container */}
           {showPhoto && (photoUrl || !isExport) && (
-            <div 
+            <div
               style={{
                 position: 'absolute',
                 top: posPhoto,
@@ -550,9 +755,9 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: photoUrl ? (config?.photo_bg_color || '#1b365d') : '#e4e4e7',
+                backgroundColor: photoUrl ? (config?.photo_bg_color === 'transparent' ? 'transparent' : (config?.photo_bg_color || '#1b365d')) : (config?.photo_bg_color === 'transparent' ? 'transparent' : '#e4e4e7'),
                 boxSizing: 'border-box',
-                zIndex: 10
+                zIndex: 15
               }}
             >
               {photoUrl ? (
@@ -565,7 +770,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#71717a' }}>
                   <User className="w-10 h-10" />
-                  <span style={{ fontSize: '9px', fontFamily: 'sans-serif' }}>NO PHOTO</span>
+                  <span style={{ fontSize: '9px', fontFamily: "'Century Gothic', CenturyGothic, AppleGothic, sans-serif" }}>NO PHOTO</span>
                 </div>
               )}
             </div>
@@ -589,7 +794,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             >
               <span
                 style={{
-                  fontFamily: "'Poppins', sans-serif",
+                  fontFamily: config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                   fontWeight: config?.nama_weight || '700',
                   fontSize: `${Math.round(Number(config?.nama_size || 13) * SCALE)}px`,
                   color: namaColor,
@@ -600,13 +805,112 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   display: '-webkit-box',
-                  WebkitLineClamp: 2,
+                  WebkitLineClamp: 4,
                   WebkitBoxOrient: 'vertical',
                   whiteSpace: 'pre-line'
                 }}
               >
                 {data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA'))}
               </span>
+            </div>
+          )}
+
+          {/* Barcode - Uploaded PNG file or generated sample barcode with thick white outline */}
+          {showBarcode && (barcodeUrl || data.barcode || !isExport) && (
+            <div
+              style={{
+                position: 'absolute',
+                top: posBarcode,
+                left: posBarcodeLeft,
+                width: barcodeW,
+                height: barcodeH,
+                zIndex: 5,
+                transform: `rotate(${barcodeRotation}deg)`,
+                transformOrigin: 'center center',
+                filter: 'drop-shadow(0px 0px 4px #ffffff)'
+              }}
+            >
+              {barcodeUrl ? (
+                <img 
+                  src={barcodeUrl} 
+                  alt="Barcode" 
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'fill',
+                    outline: '4px solid #ffffff',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              ) : (
+                <div style={{ outline: '4px solid #ffffff', width: '100%', height: '100%', boxSizing: 'border-box' }}>
+                  <Barcode 
+                    value={data.barcode && data.barcode !== 'indexeddb' ? data.barcode : '1234567890'} 
+                    width="100%"
+                    height="100%"
+                    color={barcodeColor}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Smartcard Chip Overlay / Non-Print Zone (ISO 7816-2) */}
+          {showChip && (
+            <div
+              style={{
+                position: 'absolute',
+                top: posChipTop,
+                left: posChipLeft,
+                width: chipW,
+                height: chipH,
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #e6c875 0%, #ffd700 50%, #c5a059 100%)',
+                border: '1.5px solid #b38f38',
+                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 5px rgba(0,0,0,0.25)',
+                zIndex: 25,
+                overflow: 'hidden',
+                boxSizing: 'border-box'
+              }}
+              title="Area Chip Smartcard ISO 7816-2"
+            >
+              {/* Microchip Contact Pins Pattern */}
+              <div className="w-full h-full p-1 grid grid-cols-2 gap-0.5 opacity-75">
+                <div className="border-r border-b border-[#8c6d23] rounded-tl-sm" />
+                <div className="border-l border-b border-[#8c6d23] rounded-tr-sm" />
+                <div className="border-r border-t border-b border-[#8c6d23]" />
+                <div className="border-l border-t border-b border-[#8c6d23]" />
+                <div className="border-r border-t border-[#8c6d23] rounded-bl-sm" />
+                <div className="border-l border-t border-[#8c6d23] rounded-br-sm" />
+              </div>
+            </div>
+          )}
+
+          {/* Footer Logo (Politeknik ATMI & Flazz Banner Bar) */}
+          {showFooterLogo && (
+            <div
+              style={{
+                position: 'absolute',
+                top: posFooterLogoTop,
+                left: posFooterLogoLeft,
+                width: footerLogoW,
+                height: footerLogoH,
+                backgroundColor: footerLogoBg === 'transparent' ? 'transparent' : footerLogoBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                padding: '0px',
+                boxSizing: 'border-box',
+                zIndex: 25
+              }}
+            >
+              <img 
+                src={footerLogoUrl} 
+                alt="Politeknik ATMI & Flazz Logo" 
+                crossOrigin="anonymous"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'left center' }}
+              />
             </div>
           )}
         </div>
@@ -616,7 +920,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     if (data.theme === 'karya-bakti') {
       return (
         <div 
-          className="w-[330px] h-[515px] id-card-render relative overflow-hidden shrink-0 select-none bg-[#1570ad]"
+          className="w-[330px] h-[523px] id-card-render relative overflow-hidden shrink-0 select-none bg-[#1570ad]"
           style={{
             backgroundColor: '#1570ad',
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
@@ -659,7 +963,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 justifyContent: 'center',
                 backgroundColor: photoUrl ? '#1b365d' : '#e4e4e7',
                 boxSizing: 'border-box',
-                zIndex: 10
+                zIndex: 15
               }}
             >
               {photoUrl ? (
@@ -732,7 +1036,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 textAlign: 'left'
               }}
             >
-              {data.nik ? `NIK.${data.nik}` : (isExport ? '' : 'NIK.175/02/25')}
+              {isPoltekUnit ? (data.nik || (isExport ? '' : '175/02/25')) : (data.nik ? `NIK.${data.nik}` : (isExport ? '' : 'NIK.175/02/25'))}
             </p>
           </div>
         </div>
@@ -741,7 +1045,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
     return (
       <div 
-        className={`w-[330px] h-[515px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
+        className={`w-[330px] h-[523px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
         style={{
           boxShadow: isExport ? 'none' : undefined,
           padding: '24px',
@@ -830,7 +1134,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
           {data.nama || 'JOHN DOE'}
         </h2>
         <p className={`text-[10px] font-mono tracking-widest text-zinc-400 font-medium`} style={{ fontSize: '10px', marginTop: '2px', fontFamily: "'Lato', sans-serif" }}>
-          NIK: {data.nik || '820491849182903'}
+          {isPoltekUnit ? (data.nik || '820491849182903') : `NIK: ${data.nik || '820491849182903'}`}
         </p>
 
         {/* Horizontal Divider Line */}
@@ -862,7 +1166,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     if (data.theme === 'karya-bakti' || customTemplate?.card_design_back) {
       return (
         <div 
-          className="w-[330px] h-[515px] id-card-render relative overflow-hidden shrink-0 select-none"
+          className="w-[330px] h-[523px] id-card-render relative overflow-hidden shrink-0 select-none"
           style={{
             background: customTemplate?.card_design_back ? 'white' : 'radial-gradient(circle at 50% 50%, #0d47a1, #08316f)',
             boxShadow: isExport ? 'none' : '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
@@ -998,7 +1302,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
     return (
       <div 
-        className={`w-[330px] h-[515px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
+        className={`w-[330px] h-[523px] id-card-render ${activeTheme.cardBg} rounded-2xl flex flex-col justify-between relative overflow-hidden shrink-0 select-none`}
         style={{
           boxShadow: isExport ? 'none' : undefined,
           padding: '24px',
@@ -1109,19 +1413,19 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto px-4 py-8">
       
       {/* Success Notification Bar */}
-      <div className="w-full bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left shadow-sm">
+      <div className="w-full bg-white/80 border border-emerald-200/80 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left shadow-sm backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-            <CheckCircle2 className="w-6 h-6" />
+          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-emerald-950">ID Card Berhasil Dibuat!</h4>
-            <p className="text-xs text-emerald-700">Data Anda berhasil disimpan di dalam session secara aman.</p>
+            <h4 className="text-sm font-bold text-slate-900">ID Card Berhasil Dibuat!</h4>
+            <p className="text-xs text-slate-500">Data Anda berhasil disimpan di dalam sesi secara aman.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-          <span>Session Active: {data.sessionId.slice(0, 8)}...</span>
+        <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold">Session Active: {data.sessionId.slice(0, 8)}...</span>
         </div>
       </div>
 
@@ -1129,131 +1433,127 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-start">
         
         {/* Left Side: Operations Card */}
-        <div className="lg:col-span-4 bg-white/80 border border-slate-200/80 shadow-2xl backdrop-blur-md rounded-3xl p-6 space-y-6">
-          <div>
-            <span className="text-[10px] tracking-[3px] uppercase font-bold text-amber-600">ID Card Studio</span>
-            <h3 className="text-lg font-bold text-slate-900 mt-1">Kelola & Unduh</h3>
-            <p className="text-xs text-slate-500 mt-1">Pilih format unduhan ID Card Anda dengan kualitas resolusi cetak tinggi.</p>
+        <div className="lg:col-span-5 bg-white border border-slate-200/80 shadow-xl rounded-3xl p-6 space-y-5">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] tracking-[2px] uppercase font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">ID Card Studio</span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 pt-1">Kelola & Unduh Kartu</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">Pilih format unduhan ID Card Anda dengan resolusi cetak tinggi.</p>
           </div>
 
-          <div className="h-[1px] bg-slate-200" />
+          <div className="h-[1px] bg-slate-100" />
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
+          {/* Action Download Buttons */}
+          <div className="space-y-2.5">
             <button
               onClick={() => handleDownload('front')}
               disabled={downloading}
-              className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100/80 border border-slate-200 hover:border-slate-350 text-slate-800 hover:text-slate-950 px-4 py-3 rounded-xl transition duration-200 text-sm font-medium disabled:opacity-50 shadow-sm"
+              className="w-full flex items-center justify-between bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 text-slate-800 hover:text-indigo-900 px-4 py-3 rounded-xl transition duration-200 text-sm font-semibold cursor-pointer shadow-xs disabled:opacity-50 group"
             >
-              <span className="flex items-center gap-2">
-                <Download className="w-4 h-4 text-cyan-600" />
+              <span className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-indigo-100/60 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
+                  <Download className="w-4 h-4" />
+                </div>
                 Unduh Bagian Depan
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">PNG</span>
+              <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">PNG</span>
             </button>
 
             <button
               onClick={() => handleDownload('back')}
               disabled={downloading}
-              className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100/80 border border-slate-200 hover:border-slate-350 text-slate-800 hover:text-slate-950 px-4 py-3 rounded-xl transition duration-200 text-sm font-medium disabled:opacity-50 shadow-sm"
+              className="w-full flex items-center justify-between bg-slate-50 hover:bg-purple-50/50 border border-slate-200/80 hover:border-purple-200 text-slate-800 hover:text-purple-900 px-4 py-3 rounded-xl transition duration-200 text-sm font-semibold cursor-pointer shadow-xs disabled:opacity-50 group"
             >
-              <span className="flex items-center gap-2">
-                <Download className="w-4 h-4 text-purple-600" />
+              <span className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-purple-100/60 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition">
+                  <Download className="w-4 h-4" />
+                </div>
                 Unduh Bagian Belakang
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">PNG</span>
+              <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">PNG</span>
             </button>
 
             <button
               onClick={() => handleDownload('both')}
               disabled={downloading}
-              className="w-full flex items-center justify-between bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-bold px-4 py-3.5 rounded-xl transition duration-200 text-sm disabled:opacity-50 shadow-lg shadow-amber-500/15"
+              className="w-full flex items-center justify-between bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold px-4 py-3.5 rounded-xl transition duration-200 text-sm cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-600/20"
             >
-              <span className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
+              <span className="flex items-center gap-2.5">
+                <Download className="w-4.5 h-4.5" />
                 Unduh Kedua Sisi (Lebar)
               </span>
-              <span className="text-[10px] font-mono opacity-85">PNG</span>
+              <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded">PNG</span>
             </button>
+          </div>
 
-            <div className="space-y-2 pt-2 border-t border-slate-200">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
-                  <Printer className="w-3.5 h-3.5 text-indigo-600" />
-                  Cetak Langsung Ke Printer (Fargo DTC1250e)
-                </label>
-                <span className="text-[9px] bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Direct Connect
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button 
-                  onClick={() => triggerPrint('front')}
-                  disabled={downloading}
-                  className="flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-sm transition disabled:opacity-50"
-                  title="Cetak langsung Sisi Depan ke Printer Fargo DTC1250e"
-                >
-                  <Printer className="w-4 h-4 text-cyan-600" />
-                  Sisi Depan
-                </button>
-                <button 
-                  onClick={() => triggerPrint('back')}
-                  disabled={downloading}
-                  className="flex flex-col items-center justify-center gap-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-sm transition disabled:opacity-50"
-                  title="Cetak langsung Sisi Belakang ke Printer Fargo DTC1250e"
-                >
-                  <Printer className="w-4 h-4 text-purple-600" />
-                  Sisi Belakang
-                </button>
-                <button 
-                  onClick={() => triggerPrint('both')}
-                  disabled={downloading}
-                  className="flex flex-col items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-md shadow-emerald-500/10 transition disabled:opacity-50"
-                  title="Cetak langsung Kedua Sisi ke Printer Fargo DTC1250e"
-                >
-                  <Printer className="w-4 h-4 text-white" />
-                  Kedua Sisi
-                </button>
-              </div>
+          <div className="h-[1px] bg-slate-100" />
+
+          {/* Direct Print Section */}
+          <div className="space-y-2.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+                <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                Cetak Langsung (Fargo DTC1250e)
+              </label>
+              <span className="text-[9px] bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Direct Connect
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button 
+                onClick={() => triggerPrint('front')}
+                disabled={downloading}
+                className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Cetak langsung Sisi Depan ke Printer Fargo DTC1250e"
+              >
+                <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                Sisi Depan
+              </button>
+              <button 
+                onClick={() => triggerPrint('back')}
+                disabled={downloading}
+                className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Cetak langsung Sisi Belakang ke Printer Fargo DTC1250e"
+              >
+                <Printer className="w-3.5 h-3.5 text-purple-600" />
+                Sisi Belakang
+              </button>
+              <button 
+                onClick={() => triggerPrint('both')}
+                disabled={downloading}
+                className="flex flex-col items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Cetak langsung Kedua Sisi ke Printer Fargo DTC1250e"
+              >
+                <Printer className="w-3.5 h-3.5 text-white" />
+                Kedua Sisi
+              </button>
             </div>
           </div>
 
-          <div className="h-[1px] bg-slate-200" />
-
-          {/* Tips Cetak Langsung / Silent Printing */}
-          <div className="bg-indigo-50/60 rounded-2xl p-4 border border-indigo-100 space-y-2">
-            <span className="text-[10px] font-bold tracking-wider text-indigo-700 uppercase flex items-center gap-1.5">
-              <Printer className="w-3.5 h-3.5 text-indigo-600" />
-              Cetak Otomatis Tanpa Popup (Silent Kiosk)
-            </span>
-            <p className="text-[11px] text-slate-650 leading-relaxed">
-              Set printer bawaan Windows ke <strong>FARGO DTC1250e Card Printer</strong>. Untuk cetak 1-klik tanpa muncul jendela pratinjau, jalankan browser Chrome/Edge dengan flag: <code className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-mono text-indigo-800">--kiosk-printing</code>.
-            </p>
-          </div>
-
           {/* QZ Tray Integration Panel */}
-          <QZPrinterControl cardElementId="export-front-card" cardBackElementId="export-back-card" />
+          <QZPrinterControl cardElementId="visible-front-card" cardBackElementId="export-back-card" />
 
           {/* Reset / Create New Button */}
           <button
             onClick={handleReset}
-            className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 border border-red-200 hover:border-red-300 py-3 rounded-xl transition duration-200 text-sm font-semibold"
+            className="w-full flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200/80 py-3 rounded-xl transition duration-200 text-xs font-semibold cursor-pointer"
           >
-            <RefreshCw className="w-4 h-4" />
-            Hapus Session & Buat Baru
+            <RefreshCw className="w-3.5 h-3.5" />
+            Hapus Sesi & Buat Baru
           </button>
         </div>
 
         {/* Right Side: Interactive 3D Card Preview */}
-        <div className="lg:col-span-8 flex flex-col items-center justify-center py-6">
+        <div className="lg:col-span-7 flex flex-col items-center justify-start py-2">
           
           {/* Instructions to click/flip */}
           <button 
             onClick={() => setIsFlipped(!isFlipped)} 
-            className="flex items-center gap-2 text-xs font-mono text-slate-650 hover:text-slate-900 bg-white px-4 py-2 rounded-full border border-slate-200 mb-6 transition duration-250 cursor-pointer shadow-sm"
+            className="flex items-center gap-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 px-5 py-2.5 rounded-full border border-slate-200/80 mb-6 transition duration-200 cursor-pointer shadow-xs hover:shadow-md"
           >
-            <ArrowRightLeft className="w-3.5 h-3.5 text-amber-500" />
-            <span>Klik kartu untuk membalik (Flip)</span>
+            <ArrowRightLeft className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Klik kartu untuk membalik (Flip 3D)</span>
           </button>
 
           {/* The Flip container */}
@@ -1262,12 +1562,12 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             className="perspective-1000 cursor-pointer group"
           >
             <div 
-              className={`w-[330px] h-[515px] preserve-3d transition-transform duration-700 ease-out relative ${
+              className={`w-[330px] h-[523px] preserve-3d transition-transform duration-700 ease-out relative ${
                 isFlipped ? 'rotate-y-180' : ''
               }`}
             >
               {/* Front side card */}
-              <div ref={visibleFrontRef} className="absolute inset-0 backface-hidden z-25">
+              <div id="visible-front-card" ref={visibleFrontRef} className="absolute inset-0 backface-hidden z-25">
                 <CardFront />
               </div>
 
@@ -1279,9 +1579,9 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
           </div>
           
           {/* Active theme badge */}
-          <div className="mt-6 flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 font-mono">Tema Terpilih:</span>
-            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${activeTheme.badgeBg} ${activeTheme.badgeText}`}>
+          <div className="mt-6 flex items-center gap-2">
+            <span className="text-xs text-slate-400 font-mono">Tema Terpilih:</span>
+            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${activeTheme.badgeBg} ${activeTheme.badgeText}`}>
               {activeTheme.name}
             </span>
           </div>
@@ -1293,22 +1593,24 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       {/* Renders flat cards formatted directly to 54mm x 86mm CR-80 pages for Fargo printer */}
       <div 
         id="print-area"
-        className="absolute top-0 left-0 pointer-events-none"
-        style={{ opacity: 0, zIndex: -50 }}
+        className="fixed -left-[9999px] -top-[9999px] pointer-events-none print:static print:left-0 print:top-0"
+        style={{ opacity: 1, zIndex: -50 }}
       >
         <div 
           id="export-front-card"
           ref={exportFrontRef}
-          className={`print-page ${printTarget !== 'front' && printTarget !== 'both' ? 'print-hidden' : ''}`}
+          className="print-page"
+          style={{ display: 'block', opacity: 1 }}
         >
-          <CardFront isExport={true} />
+          <CardFront isExport={false} />
         </div>
         <div 
           id="export-back-card"
           ref={exportBackRef}
-          className={`print-page ${printTarget !== 'back' && printTarget !== 'both' ? 'print-hidden' : ''}`}
+          className="print-page"
+          style={{ display: 'block', opacity: 1 }}
         >
-          <CardBack isExport={true} />
+          <CardBack isExport={false} />
         </div>
       </div>
 

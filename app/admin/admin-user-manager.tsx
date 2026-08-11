@@ -7,7 +7,7 @@ import {
   AlertTriangle, CheckCircle2, Loader2, Mail,
   Lock, User, Users, Building, Search, SlidersHorizontal,
   Upload, FileImage, Folder, Eye, Trash,
-  LayoutDashboard, Shield, Menu, LogOut, ShieldAlert, Move
+  LayoutDashboard, Shield, Menu, LogOut, ShieldAlert, Move, Cpu
 } from 'lucide-react'
 import { signOutAction } from '../auth-actions'
 import {
@@ -128,16 +128,36 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     nik_align: 'center' | 'left' | 'right';
     nama_align: 'center' | 'left' | 'right';
     photo_bg_color: string;
+    card_bg_color: string;
     show_jabatan: boolean;
     show_nik: boolean;
     show_nama: boolean;
     show_photo: boolean;
+    show_barcode: boolean;
+    show_chip: boolean;
+    chip_top: string;
+    chip_left: string;
+    chip_width: string;
+    chip_height: string;
     jabatan_size?: string;
     jabatan_weight?: string;
     nik_size?: string;
     nik_weight?: string;
     nama_size?: string;
     nama_weight?: string;
+    barcode_top: string;
+    barcode_left: string;
+    barcode_width: string;
+    barcode_height: string;
+    barcode_rotation: string;
+    barcode_color: string;
+    show_footer_logo: boolean;
+    footer_logo_top: string;
+    footer_logo_left: string;
+    footer_logo_width: string;
+    footer_logo_height: string;
+    footer_logo_url: string;
+    footer_logo_bg: string;
   }>({
     jabatan_top: '26.5',
     jabatan_left: '5',
@@ -158,16 +178,36 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     nik_align: 'center',
     nama_align: 'center',
     photo_bg_color: '#1b365d',
+    card_bg_color: '#ffffff',
     show_jabatan: true,
     show_nik: true,
     show_nama: true,
     show_photo: true,
+    show_barcode: true,
+    show_chip: false,
+    chip_top: '20',
+    chip_left: '68',
+    chip_width: '52',
+    chip_height: '44',
     jabatan_size: '11',
     jabatan_weight: '900',
     nik_size: '10',
     nik_weight: '400',
     nama_size: '13',
-    nama_weight: '700'
+    nama_weight: '700',
+    barcode_top: '10',
+    barcode_left: '75',
+    barcode_width: '60',
+    barcode_height: '200',
+    barcode_rotation: '90',
+    barcode_color: '#000000',
+    show_footer_logo: true,
+    footer_logo_top: '77',
+    footer_logo_left: '0',
+    footer_logo_width: '245',
+    footer_logo_height: '56',
+    footer_logo_url: '/img/atmidanflazz.png',
+    footer_logo_bg: 'transparent'
   })
 
   const getLayoutObject = (unit: any) => {
@@ -207,16 +247,36 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         nik_align: config?.nik_align || 'center',
         nama_align: config?.nama_align || 'center',
         photo_bg_color: config?.photo_bg_color || '#1b365d',
+        card_bg_color: config?.card_bg_color || '#ffffff',
         show_jabatan: config?.show_jabatan !== undefined ? !!config.show_jabatan : true,
         show_nik: config?.show_nik !== undefined ? !!config.show_nik : true,
         show_nama: config?.show_nama !== undefined ? !!config.show_nama : true,
         show_photo: config?.show_photo !== undefined ? !!config.show_photo : true,
+        show_barcode: config?.show_barcode !== undefined ? !!config.show_barcode : true,
+        show_chip: config?.show_chip !== undefined ? !!config.show_chip : false,
+        chip_top: config?.chip_top || '20',
+        chip_left: config?.chip_left || '68',
+        chip_width: config?.chip_width || '52',
+        chip_height: config?.chip_height || '44',
         jabatan_size: config?.jabatan_size || '11',
         jabatan_weight: config?.jabatan_weight || '900',
         nik_size: config?.nik_size || '10',
         nik_weight: config?.nik_weight || '400',
         nama_size: config?.nama_size || '13',
-        nama_weight: config?.nama_weight || '700'
+        nama_weight: config?.nama_weight || '700',
+        barcode_top: config?.barcode_top || '10',
+        barcode_left: config?.barcode_left || '75',
+        barcode_width: config?.barcode_width || '60',
+        barcode_height: config?.barcode_height || '200',
+        barcode_rotation: config?.barcode_rotation || '90',
+        barcode_color: config?.barcode_color || '#000000',
+        show_footer_logo: config?.show_footer_logo !== undefined ? !!config.show_footer_logo : true,
+        footer_logo_top: config?.footer_logo_top || '77',
+        footer_logo_left: config?.footer_logo_left || '0',
+        footer_logo_width: config?.footer_logo_width || '245',
+        footer_logo_height: config?.footer_logo_height || '56',
+        footer_logo_url: config?.footer_logo_url || '/img/atmidanflazz.png',
+        footer_logo_bg: config?.footer_logo_bg !== undefined ? config.footer_logo_bg : 'transparent'
       })
     } else {
       setModalLayout({
@@ -239,16 +299,36 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         nik_align: 'center',
         nama_align: 'center',
         photo_bg_color: '#1b365d',
+        card_bg_color: '#ffffff',
         show_jabatan: true,
         show_nik: true,
         show_nama: true,
         show_photo: true,
+        show_barcode: true,
+        show_chip: false,
+        chip_top: '20',
+        chip_left: '68',
+        chip_width: '52',
+        chip_height: '44',
         jabatan_size: '11',
         jabatan_weight: '900',
         nik_size: '10',
         nik_weight: '400',
         nama_size: '13',
-        nama_weight: '700'
+        nama_weight: '700',
+        barcode_top: '10',
+        barcode_left: '75',
+        barcode_width: '60',
+        barcode_height: '200',
+        barcode_rotation: '90',
+        barcode_color: '#000000',
+        show_footer_logo: true,
+        footer_logo_top: '77',
+        footer_logo_left: '0',
+        footer_logo_width: '245',
+        footer_logo_height: '56',
+        footer_logo_url: '/img/atmidanflazz.png',
+        footer_logo_bg: 'transparent'
       })
     }
   }, [editUnit, showCreateUnit])
@@ -293,8 +373,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const newTopPx = mouseY - dragOffset.y
 
     // Element dimensions (for clamping)
-    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : 216
-    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24)
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_width) * EDITOR_SCALE) : (activeDragElement === 'chip' ? (Number(modalLayout.chip_width) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_width) * EDITOR_SCALE) : 216)))
+    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_height) * EDITOR_SCALE) : (activeDragElement === 'chip' ? (Number(modalLayout.chip_height) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24))))
 
     // Clamp values (allowing half width bleed off edge for freedom)
     const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
@@ -304,7 +384,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const percentY = (clampedY / rect.height) * 100
 
     let finalLeft = percentX.toFixed(1)
-    if (activeDragElement !== 'photo' && Math.abs(percentX - 5) < 3.5) {
+    if (activeDragElement !== 'photo' && activeDragElement !== 'barcode' && activeDragElement !== 'footer_logo' && Math.abs(percentX - 5) < 3.5) {
       finalLeft = '5'
     }
 
@@ -349,8 +429,8 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const newLeftPx = mouseX - dragOffset.x
     const newTopPx = mouseY - dragOffset.y
 
-    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : 216
-    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24)
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_width) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_width) * EDITOR_SCALE) : 216))
+    const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_height) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24)))
 
     const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
     const clampedY = Math.max(-elementHeight / 2, Math.min(newTopPx, rect.height - elementHeight / 2))
@@ -363,6 +443,115 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
       [`${activeDragElement}_left`]: percentX.toFixed(1),
       [`${activeDragElement}_top`]: percentY.toFixed(1)
     }))
+  }
+
+  // Quick Preset Layout Applicator
+  const applyPreset = (preset: 'atmi' | 'karya-bakti') => {
+    if (preset === 'atmi') {
+      setModalLayout({
+        jabatan_top: '26.5',
+        jabatan_left: '5',
+        nik_top: '18',
+        nik_left: '5',
+        nama_top: '5',
+        nama_left: '5',
+        photo_top: '28',
+        photo_left: '8',
+        photo_width: '210',
+        photo_height: '270',
+        photo_shape: 'rectangle',
+        text_color: '#1b365d',
+        jabatan_color: '#155afa',
+        nik_color: '#334155',
+        nama_color: '#1b365d',
+        jabatan_align: 'left',
+        nik_align: 'left',
+        nama_align: 'left',
+        photo_bg_color: '#1b365d',
+        card_bg_color: '#ffffff',
+        show_jabatan: false,
+        show_nik: true,
+        show_nama: true,
+        show_photo: true,
+        show_barcode: true,
+        show_chip: false,
+        chip_top: '20',
+        chip_left: '68',
+        chip_width: '52',
+        chip_height: '44',
+        jabatan_size: '11',
+        jabatan_weight: '900',
+        nik_size: '12',
+        nik_weight: '400',
+        nama_size: '14',
+        nama_weight: '700',
+        barcode_top: '25',
+        barcode_left: '51',
+        barcode_width: '45',
+        barcode_height: '230',
+        barcode_rotation: '90',
+        barcode_color: '#000000',
+        show_footer_logo: true,
+        footer_logo_top: '77',
+        footer_logo_left: '0',
+        footer_logo_width: '245',
+        footer_logo_height: '56',
+        footer_logo_url: '/img/atmidanflazz.png',
+        footer_logo_bg: 'transparent'
+      })
+    } else {
+      setModalLayout({
+        jabatan_top: '26.5',
+        jabatan_left: '5',
+        nik_top: '35',
+        nik_left: '5',
+        nama_top: '86',
+        nama_left: '5',
+        photo_top: '43',
+        photo_left: '26.5',
+        photo_width: '150',
+        photo_height: '200',
+        photo_shape: 'rectangle',
+        text_color: '#ffffff',
+        jabatan_color: '#facc15',
+        nik_color: '#ffffff',
+        nama_color: '#ffffff',
+        jabatan_align: 'center',
+        nik_align: 'center',
+        nama_align: 'center',
+        photo_bg_color: '#1b365d',
+        card_bg_color: '#ffffff',
+        show_jabatan: true,
+        show_nik: true,
+        show_nama: true,
+        show_photo: true,
+        show_barcode: false,
+        show_chip: false,
+        chip_top: '20',
+        chip_left: '68',
+        chip_width: '52',
+        chip_height: '44',
+        jabatan_size: '11',
+        jabatan_weight: '900',
+        nik_size: '10',
+        nik_weight: '400',
+        nama_size: '13',
+        nama_weight: '700',
+        barcode_top: '10',
+        barcode_left: '75',
+        barcode_width: '60',
+        barcode_height: '200',
+        barcode_rotation: '90',
+        barcode_color: '#000000',
+        show_footer_logo: false,
+        footer_logo_top: '84',
+        footer_logo_left: '5',
+        footer_logo_width: '216',
+        footer_logo_height: '40',
+        footer_logo_url: '/img/atmidanflazz.png',
+        footer_logo_bg: 'transparent'
+      })
+    }
   }
 
   // Auto-dismiss success message
@@ -1437,7 +1626,10 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     onMouseLeave={handleDragEnd}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleDragEnd}
-                    className="w-[250px] h-[391px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
+                    style={{
+                      backgroundColor: modalLayout.card_bg_color === 'transparent' ? 'transparent' : (modalLayout.card_bg_color || '#ffffff')
+                    }}
+                    className="w-[250px] h-[396px] border border-slate-300 rounded-xl relative overflow-hidden shadow-inner select-none cursor-default"
                   >
                     {/* Background template preview */}
                     {frontDesignBase64 ? (
@@ -1542,7 +1734,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           border: modalLayout.photo_shape === 'circle' ? '2px solid white' : (modalLayout.photo_shape === 'square' ? '2px solid white' : '1px dashed transparent'),
                           boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
                           cursor: 'move',
-                          zIndex: 20,
+                          zIndex: 15,
                           overflow: 'hidden',
                           boxSizing: 'border-box'
                         }}
@@ -1597,9 +1789,124 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
                       </div>
                     )}
+
+                    {/* Barcode Drag Over */}
+                    {modalLayout.show_barcode && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'barcode')}
+                        onTouchStart={(e) => handleTouchStart(e, 'barcode')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.barcode_top}%`,
+                          left: `${modalLayout.barcode_left}%`,
+                          width: `${Number(modalLayout.barcode_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.barcode_height) * EDITOR_SCALE}px`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 5,
+                          transform: `rotate(${modalLayout.barcode_rotation}deg)`,
+                          transformOrigin: 'center center'
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-amber-500 hover:bg-amber-500/10 rounded transition"
+                        title="Geser Barcode (Klik & Drag Bebas)"
+                      >
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: String(modalLayout.barcode_rotation) === '90' ? 'column' : 'row',
+                          gap: '1.5px',
+                          width: '100%',
+                          height: '100%',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: modalLayout.barcode_color || '#000000',
+                          outline: '3px solid #ffffff',
+                          filter: 'drop-shadow(0px 0px 3px #ffffff)',
+                          boxSizing: 'border-box'
+                        }}>
+                          {[3,1,4,2,1,3,2,1,4,1,3,2,1,4,2,1,3,2,1,4,1,3,2,1,4].map((w, i) => (
+                            <div key={i} style={{ 
+                              width: String(modalLayout.barcode_rotation) === '90' ? '100%' : `${w}px`, 
+                              height: String(modalLayout.barcode_rotation) === '90' ? `${w}px` : '100%', 
+                              backgroundColor: 'currentColor' 
+                            }} />
+                          ))}
+                        </div>
+                        <Move className="w-3 h-3 text-amber-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Chip Drag Over */}
+                    {modalLayout.show_chip && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'chip')}
+                        onTouchStart={(e) => handleTouchStart(e, 'chip')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.chip_top}%`,
+                          left: `${modalLayout.chip_left}%`,
+                          width: `${Number(modalLayout.chip_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.chip_height) * EDITOR_SCALE}px`,
+                          borderRadius: '4px',
+                          background: 'linear-gradient(135deg, #e6c875 0%, #ffd700 50%, #c5a059 100%)',
+                          border: '1.5px solid #b38f38',
+                          boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 4px rgba(0,0,0,0.2)',
+                          cursor: 'move',
+                          zIndex: 25,
+                          overflow: 'hidden',
+                          boxSizing: 'border-box'
+                        }}
+                        className="group hover:border-dashed hover:border-amber-500 transition flex flex-col items-center justify-center relative"
+                        title="Geser Slot Chip Smartcard (Klik & Drag Bebas)"
+                      >
+                        <div className="w-full h-full p-0.5 grid grid-cols-2 gap-0.5 opacity-80 pointer-events-none">
+                          <div className="border-r border-b border-[#8c6d23] rounded-tl-xs" />
+                          <div className="border-l border-b border-[#8c6d23] rounded-tr-xs" />
+                          <div className="border-r border-t border-b border-[#8c6d23]" />
+                          <div className="border-l border-t border-b border-[#8c6d23]" />
+                          <div className="border-r border-t border-[#8c6d23] rounded-bl-xs" />
+                          <div className="border-l border-t border-[#8c6d23] rounded-br-xs" />
+                        </div>
+                        <Move className="w-3 h-3 text-amber-950 absolute opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Footer Logo Drag Over */}
+                    {modalLayout.show_footer_logo && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'footer_logo')}
+                        onTouchStart={(e) => handleTouchStart(e, 'footer_logo')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.footer_logo_top}%`,
+                          left: `${modalLayout.footer_logo_left}%`,
+                          width: `${Number(modalLayout.footer_logo_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.footer_logo_height) * EDITOR_SCALE}px`,
+                          backgroundColor: modalLayout.footer_logo_bg === 'transparent' ? 'transparent' : (modalLayout.footer_logo_bg || '#ffffff'),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-start',
+                          padding: '0px',
+                          boxSizing: 'border-box',
+                          cursor: 'move',
+                          zIndex: 25
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-blue-500 hover:bg-blue-500/10 rounded transition"
+                        title="Geser Logo ATMI & Flazz (Klik & Drag Bebas)"
+                      >
+                        <img 
+                          src={modalLayout.footer_logo_url || '/img/atmidanflazz.png'} 
+                          alt="Logo ATMI & Flazz" 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'left center' }}
+                          className="pointer-events-none"
+                        />
+                        <Move className="w-3 h-3 text-blue-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
                   </div>
                   <div className="text-[9px] text-slate-400 font-medium text-center leading-normal max-w-[220px]">
-                    💡 <strong>Tips Editor:</strong> Arahkan mouse ke Jabatan, NIK, Foto, atau Nama pada kartu di atas, lalu **klik & seret (drag & drop)** secara bebas ke segala arah!
+                    💡 <strong>Tips Editor:</strong> Arahkan mouse ke Jabatan, NIK, Foto, Nama, atau Barcode pada kartu di atas, lalu **klik & seret (drag & drop)** secara bebas ke segala arah!
                   </div>
                 </div>
 
@@ -1696,9 +2003,29 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
 
               {/* ── KONFIGURASI TATA LETAK ─────────────────────────────────── */}
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
-                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 mb-2">
-                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tata Letak & Warna Teks</h4>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tata Letak & Warna Teks</h4>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('atmi')}
+                      className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="Terapkan preset tata letak PT ATMI (Nama/NIK di kiri, Barcode vertikal di kanan)"
+                    >
+                      ⚡ Preset PT ATMI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('karya-bakti')}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-semibold transition cursor-pointer"
+                      title="Terapkan preset klasik Karya Bakti (Teks tengah)"
+                    >
+                      Preset Karya Bakti
+                    </button>
+                  </div>
                 </div>
 
                 {/* Komponen Visibility Toggles */}
@@ -1728,6 +2055,18 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         onChange={e => setModalLayout(prev => ({ ...prev, show_photo: e.target.checked }))}
                         className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
                       Foto
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_barcode}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_barcode: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Barcode
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      <input type="checkbox" checked={modalLayout.show_chip}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_chip: e.target.checked }))}
+                        className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer" />
+                      Slot Chip Smart Card
                     </label>
                   </div>
                 </div>
@@ -1843,22 +2182,37 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       {modalLayout.photo_shape === 'rectangle' ? (
                         <>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
-                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                            <div className="flex items-center justify-between">
+                              <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
+                              <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                                onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
+                                className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
+                            </div>
+                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
-                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_height}
+                            <div className="flex items-center justify-between">
+                              <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
+                              <input type="number" min="40" max="1200" value={modalLayout.photo_height}
+                                onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
+                                className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
+                            </div>
+                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_height}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                         </>
                       ) : (
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
-                          <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
+                            <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                              onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
+                              className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
+                          </div>
+                          <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
                             onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -1866,174 +2220,344 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     </>
                   )}
 
+                  {/* Footer Logo Configuration */}
+                  {modalLayout.show_footer_logo && (
+                    <>
+                      <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5">
+                        <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider block mb-2">🏷️ Konfigurasi Logo ATMI & Flazz</span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Logo Y ({modalLayout.footer_logo_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.footer_logo_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Logo X ({modalLayout.footer_logo_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.footer_logo_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.footer_logo_width}px)</label>
+                        <input type="range" min="40" max="300" step="1" value={modalLayout.footer_logo_width}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_width: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.footer_logo_height}px)</label>
+                        <input type="range" min="10" max="150" step="1" value={modalLayout.footer_logo_height}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_height: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Latar Banner Logo</label>
+                          <button type="button" onClick={() => setModalLayout(prev => ({ ...prev, footer_logo_bg: prev.footer_logo_bg === 'transparent' ? '#ffffff' : 'transparent' }))}
+                            className={`text-[8px] px-1 py-0.2 rounded font-mono cursor-pointer ${modalLayout.footer_logo_bg === 'transparent' ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
+                            {modalLayout.footer_logo_bg === 'transparent' ? '✓ Transparan' : 'Transparan'}
+                          </button>
+                        </div>
+                        <div className="flex gap-1.5 items-center">
+                          <input type="color" value={modalLayout.footer_logo_bg === 'transparent' ? '#ffffff' : (modalLayout.footer_logo_bg || '#ffffff')}
+                            onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_bg: e.target.value }))}
+                            className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                          <input type="text" value={modalLayout.footer_logo_bg || '#ffffff'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_bg: e.target.value }))}
+                            className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Barcode Configuration */}
+                  {modalLayout.show_barcode && (
+                    <>
+                      <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5">
+                        <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider block mb-2">⬛ Konfigurasi Barcode</span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Barcode Y ({modalLayout.barcode_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.barcode_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Barcode X ({modalLayout.barcode_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.barcode_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.barcode_width}px)</label>
+                        <input type="range" min="20" max="200" step="1" value={modalLayout.barcode_width}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_width: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.barcode_height}px)</label>
+                        <input type="range" min="20" max="300" step="1" value={modalLayout.barcode_height}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_height: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Rotasi</label>
+                        <select value={modalLayout.barcode_rotation}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_rotation: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="0">0° (Horizontal)</option>
+                          <option value="90">90° (Vertikal)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Barcode</label>
+                        <div className="flex gap-1.5 items-center">
+                          <input type="color" value={modalLayout.barcode_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, barcode_color: e.target.value }))}
+                            className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                          <input type="text" value={modalLayout.barcode_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, barcode_color: e.target.value }))}
+                            className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Smart Card Chip Configuration */}
+                  {modalLayout.show_chip && (
+                    <>
+                      <div className="col-span-2 border-t border-amber-200 pt-3 mt-1.5">
+                        <span className="text-[9px] font-bold text-amber-800 uppercase tracking-wider block mb-2">💳 Area Slot Chip Smartcard (ISO 7816-2)</span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Chip Y (Tinggi: {modalLayout.chip_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.chip_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_top: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Chip X (Samping: {modalLayout.chip_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.chip_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_left: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Chip ({modalLayout.chip_width}px)</label>
+                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_width}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_width: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Chip ({modalLayout.chip_height}px)</label>
+                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_height}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_height: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                    </>
+                  )}
+
                   {/* Text & Photo Color Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {/* Warna Jabatan */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.jabatan_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.jabatan_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                  <div className="col-span-2 space-y-2 border-t border-slate-200 pt-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">🎨 Warna Teks & Latar Kartu</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-xs">
+                      {/* Warna Latar Kartu */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <label className="text-[10px] font-bold text-slate-600 uppercase">Latar Kartu</label>
+                          <button type="button" onClick={() => setModalLayout(prev => ({ ...prev, card_bg_color: prev.card_bg_color === 'transparent' ? '#ffffff' : 'transparent' }))}
+                            className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition cursor-pointer ${modalLayout.card_bg_color === 'transparent' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                            {modalLayout.card_bg_color === 'transparent' ? '✓ Transparan' : 'Transparan'}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.card_bg_color === 'transparent' ? '#ffffff' : (modalLayout.card_bg_color || '#ffffff')}
+                            onChange={e => setModalLayout(prev => ({ ...prev, card_bg_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.card_bg_color || '#ffffff'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, card_bg_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Warna NIK */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna NIK</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.nik_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.nik_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      {/* Warna Latar Foto */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <label className="text-[10px] font-bold text-slate-600 uppercase">Latar Foto</label>
+                          <button type="button" onClick={() => setModalLayout(prev => ({ ...prev, photo_bg_color: prev.photo_bg_color === 'transparent' ? '#1b365d' : 'transparent' }))}
+                            className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition cursor-pointer ${modalLayout.photo_bg_color === 'transparent' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                            {modalLayout.photo_bg_color === 'transparent' ? '✓ Transparan' : 'Transparan'}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.photo_bg_color === 'transparent' ? '#ffffff' : (modalLayout.photo_bg_color || '#1b365d')}
+                            onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.photo_bg_color || '#1b365d'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Warna Nama */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Nama</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.nama_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.nama_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      {/* Warna Jabatan */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.jabatan_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.jabatan_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Warna Latar Belakang Foto Default */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Latar Foto Default</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.photo_bg_color || '#1b365d'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.photo_bg_color || '#1b365d'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      {/* Warna NIK */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase block">Warna NIK</label>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.nik_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.nik_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
+                      </div>
+
+                      {/* Warna Nama */}
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase block">Warna Nama</label>
+                        <div className="flex gap-2 items-center max-w-[240px]">
+                          <input type="color" value={modalLayout.nama_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.nama_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Text Alignment Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
-                    {/* Align Jabatan */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Jabatan</label>
-                      <select value={modalLayout.jabatan_align || 'center'}
-                        onChange={e => setModalLayout(prev => ({ ...prev, jabatan_align: e.target.value as 'center' | 'left' | 'right' }))}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
-                        <option value="center">Tengah (Center)</option>
-                        <option value="left">Kiri (Left)</option>
-                        <option value="right">Kanan (Right)</option>
-                      </select>
-                    </div>
+                  <div className="col-span-2 space-y-2 border-t border-slate-200 pt-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">📐 Perataan Teks (Alignment)</span>
+                    <div className="grid grid-cols-3 gap-2.5 bg-white border border-slate-200/80 rounded-xl p-3 shadow-xs">
+                      {/* Align Jabatan */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">Jabatan</label>
+                        <select value={modalLayout.jabatan_align || 'center'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_align: e.target.value as 'center' | 'left' | 'right' }))}
+                          className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                          <option value="center">Center</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
 
-                    {/* Align NIK */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align NIK</label>
-                      <select value={modalLayout.nik_align || 'center'}
-                        onChange={e => setModalLayout(prev => ({ ...prev, nik_align: e.target.value as 'center' | 'left' | 'right' }))}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
-                        <option value="center">Tengah (Center)</option>
-                        <option value="left">Kiri (Left)</option>
-                        <option value="right">Kanan (Right)</option>
-                      </select>
-                    </div>
+                      {/* Align NIK */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">NIK</label>
+                        <select value={modalLayout.nik_align || 'center'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_align: e.target.value as 'center' | 'left' | 'right' }))}
+                          className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                          <option value="center">Center</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
 
-                    {/* Align Nama */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Nama</label>
-                      <select value={modalLayout.nama_align || 'center'}
-                        onChange={e => setModalLayout(prev => ({ ...prev, nama_align: e.target.value as 'center' | 'left' | 'right' }))}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
-                        <option value="center">Tengah (Center)</option>
-                        <option value="left">Kiri (Left)</option>
-                        <option value="right">Kanan (Right)</option>
-                      </select>
+                      {/* Align Nama */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">Nama</label>
+                        <select value={modalLayout.nama_align || 'center'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_align: e.target.value as 'center' | 'left' | 'right' }))}
+                          className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                          <option value="center">Center</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
                   {/* Font Size & Weight Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-3 grid grid-cols-3 gap-3">
-                    {/* Jabatan Font Config */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Jabatan</label>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.jabatan_size || '11'}px)</label>
-                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                  <div className="col-span-2 space-y-2 border-t border-slate-200 pt-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">🔤 Ukuran & Ketebalan Font</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white border border-slate-200/80 rounded-xl p-3 shadow-xs">
+                      {/* Jabatan Font Config */}
+                      <div className="space-y-2 border-b sm:border-b-0 sm:border-r border-slate-100 sm:pr-3 pb-2 sm:pb-0">
+                        <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Jabatan</label>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.jabatan_size || '11'}px</strong></label>
+                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ketebalan</label>
+                          <select value={modalLayout.jabatan_weight || '900'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_weight: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="300">Thin (300)</option>
+                            <option value="400">Regular (400)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi Bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                            <option value="800">Extra Bold (800)</option>
+                            <option value="900">Black (900)</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
-                        <select value={modalLayout.jabatan_weight || '900'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_weight: e.target.value }))}
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
-                          <option value="300">Thin (300)</option>
-                          <option value="400">Regular (400)</option>
-                          <option value="500">Medium (500)</option>
-                          <option value="600">Semi Bold (600)</option>
-                          <option value="700">Bold (700)</option>
-                          <option value="800">Extra Bold (800)</option>
-                          <option value="900">Black (900)</option>
-                        </select>
-                      </div>
-                    </div>
 
-                    {/* NIK Font Config */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font NIK</label>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nik_size || '10'}px)</label>
-                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      {/* NIK Font Config */}
+                      <div className="space-y-2 border-b sm:border-b-0 sm:border-r border-slate-100 sm:pr-3 pb-2 sm:pb-0">
+                        <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font NIK</label>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nik_size || '10'}px</strong></label>
+                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ketebalan</label>
+                          <select value={modalLayout.nik_weight || '400'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_weight: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="300">Thin (300)</option>
+                            <option value="400">Regular (400)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi Bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                            <option value="800">Extra Bold (800)</option>
+                            <option value="900">Black (900)</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
-                        <select value={modalLayout.nik_weight || '400'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_weight: e.target.value }))}
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
-                          <option value="300">Thin (300)</option>
-                          <option value="400">Regular (400)</option>
-                          <option value="500">Medium (500)</option>
-                          <option value="600">Semi Bold (600)</option>
-                          <option value="700">Bold (700)</option>
-                          <option value="800">Extra Bold (800)</option>
-                          <option value="900">Black (900)</option>
-                        </select>
-                      </div>
-                    </div>
 
-                    {/* Nama Font Config */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Nama</label>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nama_size || '13'}px)</label>
-                        <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
-                        <select value={modalLayout.nama_weight || '700'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_weight: e.target.value }))}
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
-                          <option value="300">Thin (300)</option>
-                          <option value="400">Regular (400)</option>
-                          <option value="500">Medium (500)</option>
-                          <option value="600">Semi Bold (600)</option>
-                          <option value="700">Bold (700)</option>
-                          <option value="800">Extra Bold (800)</option>
-                          <option value="900">Black (900)</option>
-                        </select>
+                      {/* Nama Font Config */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Nama</label>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nama_size || '13'}px</strong></label>
+                          <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ketebalan</label>
+                          <select value={modalLayout.nama_weight || '700'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_weight: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="300">Thin (300)</option>
+                            <option value="400">Regular (400)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi Bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                            <option value="800">Extra Bold (800)</option>
+                            <option value="900">Black (900)</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2105,7 +2629,10 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     onMouseLeave={handleDragEnd}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleDragEnd}
-                    className="w-[250px] h-[391px] border border-slate-300 rounded-xl relative overflow-hidden bg-slate-100 shadow-inner select-none cursor-default"
+                    style={{
+                      backgroundColor: modalLayout.card_bg_color === 'transparent' ? 'transparent' : (modalLayout.card_bg_color || '#ffffff')
+                    }}
+                    className="w-[250px] h-[396px] border border-slate-300 rounded-xl relative overflow-hidden shadow-inner select-none cursor-default"
                   >
                     {/* Background template preview */}
                     {frontDesignBase64 === 'REMOVE' ? (
@@ -2215,7 +2742,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           border: modalLayout.photo_shape === 'circle' ? '2px solid white' : (modalLayout.photo_shape === 'square' ? '2px solid white' : '1px dashed transparent'),
                           boxShadow: modalLayout.photo_shape === 'circle' ? '0 2px 6px rgba(0,0,0,0.15)' : (modalLayout.photo_shape === 'square' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'),
                           cursor: 'move',
-                          zIndex: 20,
+                          zIndex: 15,
                           overflow: 'hidden'
                         }}
                         className="group hover:border-dashed hover:border-indigo-500 hover:bg-indigo-500/10 transition flex items-center justify-center bg-slate-300/80"
@@ -2269,9 +2796,124 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <Move className="w-3 h-3 text-indigo-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
                       </div>
                     )}
+
+                    {/* Barcode Drag Over */}
+                    {modalLayout.show_barcode && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'barcode')}
+                        onTouchStart={(e) => handleTouchStart(e, 'barcode')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.barcode_top}%`,
+                          left: `${modalLayout.barcode_left}%`,
+                          width: `${Number(modalLayout.barcode_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.barcode_height) * EDITOR_SCALE}px`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'move',
+                          zIndex: 5,
+                          transform: `rotate(${modalLayout.barcode_rotation}deg)`,
+                          transformOrigin: 'center center'
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-amber-500 hover:bg-amber-500/10 rounded transition"
+                        title="Geser Barcode (Klik & Drag Bebas)"
+                      >
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: String(modalLayout.barcode_rotation) === '90' ? 'column' : 'row',
+                          gap: '1.5px',
+                          width: '100%',
+                          height: '100%',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: modalLayout.barcode_color || '#000000',
+                          outline: '3px solid #ffffff',
+                          filter: 'drop-shadow(0px 0px 3px #ffffff)',
+                          boxSizing: 'border-box'
+                        }}>
+                          {[3,1,4,2,1,3,2,1,4,1,3,2,1,4,2,1,3,2,1,4,1,3,2,1,4].map((w, i) => (
+                            <div key={i} style={{ 
+                              width: String(modalLayout.barcode_rotation) === '90' ? '100%' : `${w}px`, 
+                              height: String(modalLayout.barcode_rotation) === '90' ? `${w}px` : '100%', 
+                              backgroundColor: 'currentColor' 
+                            }} />
+                          ))}
+                        </div>
+                        <Move className="w-3 h-3 text-amber-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Chip Drag Over */}
+                    {modalLayout.show_chip && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'chip')}
+                        onTouchStart={(e) => handleTouchStart(e, 'chip')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.chip_top}%`,
+                          left: `${modalLayout.chip_left}%`,
+                          width: `${Number(modalLayout.chip_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.chip_height) * EDITOR_SCALE}px`,
+                          borderRadius: '4px',
+                          background: 'linear-gradient(135deg, #e6c875 0%, #ffd700 50%, #c5a059 100%)',
+                          border: '1.5px solid #b38f38',
+                          boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.7), 0 2px 4px rgba(0,0,0,0.2)',
+                          cursor: 'move',
+                          zIndex: 25,
+                          overflow: 'hidden',
+                          boxSizing: 'border-box'
+                        }}
+                        className="group hover:border-dashed hover:border-amber-500 transition flex flex-col items-center justify-center relative"
+                        title="Geser Slot Chip Smartcard (Klik & Drag Bebas)"
+                      >
+                        <div className="w-full h-full p-0.5 grid grid-cols-2 gap-0.5 opacity-80 pointer-events-none">
+                          <div className="border-r border-b border-[#8c6d23] rounded-tl-xs" />
+                          <div className="border-l border-b border-[#8c6d23] rounded-tr-xs" />
+                          <div className="border-r border-t border-b border-[#8c6d23]" />
+                          <div className="border-l border-t border-b border-[#8c6d23]" />
+                          <div className="border-r border-t border-[#8c6d23] rounded-bl-xs" />
+                          <div className="border-l border-t border-[#8c6d23] rounded-br-xs" />
+                        </div>
+                        <Move className="w-3 h-3 text-amber-950 absolute opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
+
+                    {/* Footer Logo Drag Over */}
+                    {modalLayout.show_footer_logo && (
+                      <div
+                        onMouseDown={(e) => handleDragStart(e, 'footer_logo')}
+                        onTouchStart={(e) => handleTouchStart(e, 'footer_logo')}
+                        style={{
+                          position: 'absolute',
+                          top: `${modalLayout.footer_logo_top}%`,
+                          left: `${modalLayout.footer_logo_left}%`,
+                          width: `${Number(modalLayout.footer_logo_width) * EDITOR_SCALE}px`,
+                          height: `${Number(modalLayout.footer_logo_height) * EDITOR_SCALE}px`,
+                          backgroundColor: modalLayout.footer_logo_bg === 'transparent' ? 'transparent' : (modalLayout.footer_logo_bg || '#ffffff'),
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-start',
+                          padding: '0px',
+                          boxSizing: 'border-box',
+                          cursor: 'move',
+                          zIndex: 25
+                        }}
+                        className="group border border-transparent hover:border-dashed hover:border-blue-500 hover:bg-blue-500/10 rounded transition"
+                        title="Geser Logo ATMI & Flazz (Klik & Drag Bebas)"
+                      >
+                        <img 
+                          src={modalLayout.footer_logo_url || '/img/atmidanflazz.png'} 
+                          alt="Logo ATMI & Flazz" 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'left center' }}
+                          className="pointer-events-none"
+                        />
+                        <Move className="w-3 h-3 text-blue-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                      </div>
+                    )}
                   </div>
                   <div className="text-[9px] text-slate-400 font-medium text-center leading-normal max-w-[220px]">
-                    💡 <strong>Tips Editor:</strong> Arahkan mouse ke Jabatan, NIK, Foto, atau Nama pada kartu di atas, lalu **klik & seret (drag & drop)** secara bebas ke segala arah!
+                    💡 <strong>Tips Editor:</strong> Arahkan mouse ke Jabatan, NIK, Foto, Nama, atau Barcode pada kartu di atas, lalu **klik & seret (drag & drop)** secara bebas ke segala arah!
                   </div>
                 </div>
 
@@ -2415,9 +3057,29 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
 
               {/* ── KONFIGURASI TATA LETAK ─────────────────────────────────── */}
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
-                <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 mb-2">
-                  <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tata Letak & Warna Teks</h4>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tata Letak & Warna Teks</h4>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('atmi')}
+                      className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                      title="Terapkan preset tata letak PT ATMI (Nama/NIK di kiri, Barcode vertikal di kanan)"
+                    >
+                      ⚡ Preset PT ATMI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyPreset('karya-bakti')}
+                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-[10px] font-semibold transition cursor-pointer"
+                      title="Terapkan preset klasik Karya Bakti (Teks tengah)"
+                    >
+                      Preset Karya Bakti
+                    </button>
+                  </div>
                 </div>
 
                 {/* Komponen Visibility Toggles */}
@@ -2447,6 +3109,24 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         onChange={e => setModalLayout(prev => ({ ...prev, show_photo: e.target.checked }))}
                         className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
                       Foto
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_barcode}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_barcode: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Barcode
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      <input type="checkbox" checked={modalLayout.show_chip}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_chip: e.target.checked }))}
+                        className="rounded border-amber-400 text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer" />
+                      Slot Chip Smart Card
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                      <input type="checkbox" checked={modalLayout.show_footer_logo}
+                        onChange={e => setModalLayout(prev => ({ ...prev, show_footer_logo: e.target.checked }))}
+                        className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                      Logo ATMI & Flazz
                     </label>
                   </div>
                 </div>
@@ -2562,22 +3242,37 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       {modalLayout.photo_shape === 'rectangle' ? (
                         <>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
-                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                            <div className="flex items-center justify-between">
+                              <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
+                              <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                                onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
+                                className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
+                            </div>
+                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
-                            <input type="range" min="40" max="300" step="1" value={modalLayout.photo_height}
+                            <div className="flex items-center justify-between">
+                              <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
+                              <input type="number" min="40" max="1200" value={modalLayout.photo_height}
+                                onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
+                                className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
+                            </div>
+                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_height}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                         </>
                       ) : (
                         <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
-                          <input type="range" min="40" max="300" step="1" value={modalLayout.photo_width}
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
+                            <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                              onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
+                              className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
+                          </div>
+                          <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
                             onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -2585,174 +3280,344 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     </>
                   )}
 
+                  {/* Footer Logo Configuration */}
+                  {modalLayout.show_footer_logo && (
+                    <>
+                      <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5">
+                        <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider block mb-2">🏷️ Konfigurasi Logo ATMI & Flazz</span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Logo Y ({modalLayout.footer_logo_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.footer_logo_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Logo X ({modalLayout.footer_logo_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.footer_logo_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.footer_logo_width}px)</label>
+                        <input type="range" min="40" max="300" step="1" value={modalLayout.footer_logo_width}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_width: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.footer_logo_height}px)</label>
+                        <input type="range" min="10" max="150" step="1" value={modalLayout.footer_logo_height}
+                          onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_height: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-bold text-slate-600 uppercase block">Latar Banner Logo</label>
+                          <button type="button" onClick={() => setModalLayout(prev => ({ ...prev, footer_logo_bg: prev.footer_logo_bg === 'transparent' ? '#ffffff' : 'transparent' }))}
+                            className={`text-[8px] px-1 py-0.2 rounded font-mono cursor-pointer ${modalLayout.footer_logo_bg === 'transparent' ? 'bg-indigo-600 text-white font-bold' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
+                            {modalLayout.footer_logo_bg === 'transparent' ? '✓ Transparan' : 'Transparan'}
+                          </button>
+                        </div>
+                        <div className="flex gap-1.5 items-center">
+                          <input type="color" value={modalLayout.footer_logo_bg === 'transparent' ? '#ffffff' : (modalLayout.footer_logo_bg || '#ffffff')}
+                            onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_bg: e.target.value }))}
+                            className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                          <input type="text" value={modalLayout.footer_logo_bg || '#ffffff'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_bg: e.target.value }))}
+                            className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Barcode Configuration */}
+                  {modalLayout.show_barcode && (
+                    <>
+                      <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5">
+                        <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider block mb-2">⬛ Konfigurasi Barcode</span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Barcode Y ({modalLayout.barcode_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.barcode_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_top: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Barcode X ({modalLayout.barcode_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.barcode_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_left: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.barcode_width}px)</label>
+                        <input type="range" min="20" max="200" step="1" value={modalLayout.barcode_width}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_width: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.barcode_height}px)</label>
+                        <input type="range" min="20" max="300" step="1" value={modalLayout.barcode_height}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_height: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Rotasi</label>
+                        <select value={modalLayout.barcode_rotation}
+                          onChange={e => setModalLayout(prev => ({ ...prev, barcode_rotation: e.target.value }))}
+                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
+                          <option value="0">0° (Horizontal)</option>
+                          <option value="90">90° (Vertikal)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Barcode</label>
+                        <div className="flex gap-1.5 items-center">
+                          <input type="color" value={modalLayout.barcode_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, barcode_color: e.target.value }))}
+                            className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
+                          <input type="text" value={modalLayout.barcode_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, barcode_color: e.target.value }))}
+                            className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Smart Card Chip Configuration */}
+                  {modalLayout.show_chip && (
+                    <>
+                      <div className="col-span-2 border-t border-amber-200 pt-3 mt-1.5">
+                        <span className="text-[9px] font-bold text-amber-800 uppercase tracking-wider block mb-2">💳 Area Slot Chip Smartcard (ISO 7816-2)</span>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Chip Y (Tinggi: {modalLayout.chip_top}%)</label>
+                        <input type="range" min="0" max="100" step="0.5" value={modalLayout.chip_top}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_top: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Chip X (Samping: {modalLayout.chip_left}%)</label>
+                        <input type="range" min="-50" max="150" step="0.5" value={modalLayout.chip_left}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_left: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Chip ({modalLayout.chip_width}px)</label>
+                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_width}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_width: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Chip ({modalLayout.chip_height}px)</label>
+                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_height}
+                          onChange={e => setModalLayout(prev => ({ ...prev, chip_height: e.target.value }))}
+                          className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      </div>
+                    </>
+                  )}
+
                   {/* Text & Photo Color Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {/* Warna Jabatan */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.jabatan_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.jabatan_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                  <div className="col-span-2 space-y-2 border-t border-slate-200 pt-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">🎨 Warna Teks & Latar Kartu</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-white border border-slate-200/80 rounded-xl p-3.5 shadow-xs">
+                      {/* Warna Latar Kartu */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <label className="text-[10px] font-bold text-slate-600 uppercase">Latar Kartu</label>
+                          <button type="button" onClick={() => setModalLayout(prev => ({ ...prev, card_bg_color: prev.card_bg_color === 'transparent' ? '#ffffff' : 'transparent' }))}
+                            className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition cursor-pointer ${modalLayout.card_bg_color === 'transparent' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                            {modalLayout.card_bg_color === 'transparent' ? '✓ Transparan' : 'Transparan'}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.card_bg_color === 'transparent' ? '#ffffff' : (modalLayout.card_bg_color || '#ffffff')}
+                            onChange={e => setModalLayout(prev => ({ ...prev, card_bg_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.card_bg_color || '#ffffff'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, card_bg_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Warna NIK */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna NIK</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.nik_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.nik_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      {/* Warna Latar Foto */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <label className="text-[10px] font-bold text-slate-600 uppercase">Latar Foto</label>
+                          <button type="button" onClick={() => setModalLayout(prev => ({ ...prev, photo_bg_color: prev.photo_bg_color === 'transparent' ? '#1b365d' : 'transparent' }))}
+                            className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition cursor-pointer ${modalLayout.photo_bg_color === 'transparent' ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}>
+                            {modalLayout.photo_bg_color === 'transparent' ? '✓ Transparan' : 'Transparan'}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.photo_bg_color === 'transparent' ? '#ffffff' : (modalLayout.photo_bg_color || '#1b365d')}
+                            onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.photo_bg_color || '#1b365d'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Warna Nama */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Warna Nama</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.nama_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.nama_color}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      {/* Warna Jabatan */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase block">Warna Jabatan</label>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.jabatan_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.jabatan_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Warna Latar Belakang Foto Default */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Latar Foto Default</label>
-                      <div className="flex gap-1.5 items-center">
-                        <input type="color" value={modalLayout.photo_bg_color || '#1b365d'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
-                          className="w-7 h-6 bg-transparent border-0 cursor-pointer p-0" />
-                        <input type="text" value={modalLayout.photo_bg_color || '#1b365d'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, photo_bg_color: e.target.value }))}
-                          className="w-full px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[9px] outline-none font-mono uppercase" />
+                      {/* Warna NIK */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase block">Warna NIK</label>
+                        <div className="flex gap-2 items-center">
+                          <input type="color" value={modalLayout.nik_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.nik_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
+                      </div>
+
+                      {/* Warna Nama */}
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase block">Warna Nama</label>
+                        <div className="flex gap-2 items-center max-w-[240px]">
+                          <input type="color" value={modalLayout.nama_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                            className="w-8 h-8 rounded-lg bg-transparent border border-slate-200 cursor-pointer p-0.5 shrink-0" />
+                          <input type="text" value={modalLayout.nama_color}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_color: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono uppercase focus:bg-white focus:border-indigo-500 transition outline-none" />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Text Alignment Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5 grid grid-cols-3 gap-3">
-                    {/* Align Jabatan */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Jabatan</label>
-                      <select value={modalLayout.jabatan_align || 'center'}
-                        onChange={e => setModalLayout(prev => ({ ...prev, jabatan_align: e.target.value as 'center' | 'left' | 'right' }))}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
-                        <option value="center">Tengah (Center)</option>
-                        <option value="left">Kiri (Left)</option>
-                        <option value="right">Kanan (Right)</option>
-                      </select>
-                    </div>
+                  <div className="col-span-2 space-y-2 border-t border-slate-200 pt-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">📐 Perataan Teks (Alignment)</span>
+                    <div className="grid grid-cols-3 gap-2.5 bg-white border border-slate-200/80 rounded-xl p-3 shadow-xs">
+                      {/* Align Jabatan */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">Jabatan</label>
+                        <select value={modalLayout.jabatan_align || 'center'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_align: e.target.value as 'center' | 'left' | 'right' }))}
+                          className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                          <option value="center">Center</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
 
-                    {/* Align NIK */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align NIK</label>
-                      <select value={modalLayout.nik_align || 'center'}
-                        onChange={e => setModalLayout(prev => ({ ...prev, nik_align: e.target.value as 'center' | 'left' | 'right' }))}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
-                        <option value="center">Tengah (Center)</option>
-                        <option value="left">Kiri (Left)</option>
-                        <option value="right">Kanan (Right)</option>
-                      </select>
-                    </div>
+                      {/* Align NIK */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">NIK</label>
+                        <select value={modalLayout.nik_align || 'center'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nik_align: e.target.value as 'center' | 'left' | 'right' }))}
+                          className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                          <option value="center">Center</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
 
-                    {/* Align Nama */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-bold text-slate-600 uppercase block">Align Nama</label>
-                      <select value={modalLayout.nama_align || 'center'}
-                        onChange={e => setModalLayout(prev => ({ ...prev, nama_align: e.target.value as 'center' | 'left' | 'right' }))}
-                        className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none cursor-pointer">
-                        <option value="center">Tengah (Center)</option>
-                        <option value="left">Kiri (Left)</option>
-                        <option value="right">Kanan (Right)</option>
-                      </select>
+                      {/* Align Nama */}
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase block">Nama</label>
+                        <select value={modalLayout.nama_align || 'center'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, nama_align: e.target.value as 'center' | 'left' | 'right' }))}
+                          className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                          <option value="center">Center</option>
+                          <option value="left">Left</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
                   {/* Font Size & Weight Configurator */}
-                  <div className="col-span-2 border-t border-slate-200 pt-3 mt-3 grid grid-cols-3 gap-3">
-                    {/* Jabatan Font Config */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Jabatan</label>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.jabatan_size || '11'}px)</label>
-                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                  <div className="col-span-2 space-y-2 border-t border-slate-200 pt-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">🔤 Ukuran & Ketebalan Font</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white border border-slate-200/80 rounded-xl p-3 shadow-xs">
+                      {/* Jabatan Font Config */}
+                      <div className="space-y-2 border-b sm:border-b-0 sm:border-r border-slate-100 sm:pr-3 pb-2 sm:pb-0">
+                        <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Jabatan</label>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.jabatan_size || '11'}px</strong></label>
+                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ketebalan</label>
+                          <select value={modalLayout.jabatan_weight || '900'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_weight: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="300">Thin (300)</option>
+                            <option value="400">Regular (400)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi Bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                            <option value="800">Extra Bold (800)</option>
+                            <option value="900">Black (900)</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
-                        <select value={modalLayout.jabatan_weight || '900'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, jabatan_weight: e.target.value }))}
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
-                          <option value="300">Thin (300)</option>
-                          <option value="400">Regular (400)</option>
-                          <option value="500">Medium (500)</option>
-                          <option value="600">Semi Bold (600)</option>
-                          <option value="700">Bold (700)</option>
-                          <option value="800">Extra Bold (800)</option>
-                          <option value="900">Black (900)</option>
-                        </select>
-                      </div>
-                    </div>
 
-                    {/* NIK Font Config */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font NIK</label>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nik_size || '10'}px)</label>
-                        <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                      {/* NIK Font Config */}
+                      <div className="space-y-2 border-b sm:border-b-0 sm:border-r border-slate-100 sm:pr-3 pb-2 sm:pb-0">
+                        <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font NIK</label>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nik_size || '10'}px</strong></label>
+                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ketebalan</label>
+                          <select value={modalLayout.nik_weight || '400'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_weight: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="300">Thin (300)</option>
+                            <option value="400">Regular (400)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi Bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                            <option value="800">Extra Bold (800)</option>
+                            <option value="900">Black (900)</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
-                        <select value={modalLayout.nik_weight || '400'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nik_weight: e.target.value }))}
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
-                          <option value="300">Thin (300)</option>
-                          <option value="400">Regular (400)</option>
-                          <option value="500">Medium (500)</option>
-                          <option value="600">Semi Bold (600)</option>
-                          <option value="700">Bold (700)</option>
-                          <option value="800">Extra Bold (800)</option>
-                          <option value="900">Black (900)</option>
-                        </select>
-                      </div>
-                    </div>
 
-                    {/* Nama Font Config */}
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-700 uppercase block border-b pb-1">Font Nama</label>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ukuran (Size: {modalLayout.nama_size || '13'}px)</label>
-                        <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
-                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[8px] text-slate-500 block">Ketebalan (Weight)</label>
-                        <select value={modalLayout.nama_weight || '700'}
-                          onChange={e => setModalLayout(prev => ({ ...prev, nama_weight: e.target.value }))}
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] outline-none cursor-pointer">
-                          <option value="300">Thin (300)</option>
-                          <option value="400">Regular (400)</option>
-                          <option value="500">Medium (500)</option>
-                          <option value="600">Semi Bold (600)</option>
-                          <option value="700">Bold (700)</option>
-                          <option value="800">Extra Bold (800)</option>
-                          <option value="900">Black (900)</option>
-                        </select>
+                      {/* Nama Font Config */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Nama</label>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nama_size || '13'}px</strong></label>
+                          <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
+                            className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Ketebalan</label>
+                          <select value={modalLayout.nama_weight || '700'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_weight: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="300">Thin (300)</option>
+                            <option value="400">Regular (400)</option>
+                            <option value="500">Medium (500)</option>
+                            <option value="600">Semi Bold (600)</option>
+                            <option value="700">Bold (700)</option>
+                            <option value="800">Extra Bold (800)</option>
+                            <option value="900">Black (900)</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
