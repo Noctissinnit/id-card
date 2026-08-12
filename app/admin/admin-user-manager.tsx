@@ -373,7 +373,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const newTopPx = mouseY - dragOffset.y
 
     // Element dimensions (for clamping)
-    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_width) * EDITOR_SCALE) : (activeDragElement === 'chip' ? (Number(modalLayout.chip_width) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_width) * EDITOR_SCALE) : 216)))
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_width) * EDITOR_SCALE) : (activeDragElement === 'chip' ? (Number(modalLayout.chip_width) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_width) * EDITOR_SCALE) : (modalLayout.show_barcode ? 185 : 216))))
     const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_height) * EDITOR_SCALE) : (activeDragElement === 'chip' ? (Number(modalLayout.chip_height) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24))))
 
     // Clamp values (allowing half width bleed off edge for freedom)
@@ -429,7 +429,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const newLeftPx = mouseX - dragOffset.x
     const newTopPx = mouseY - dragOffset.y
 
-    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_width) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_width) * EDITOR_SCALE) : 216))
+    const elementWidth = activeDragElement === 'photo' ? (Number(modalLayout.photo_width) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_width) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_width) * EDITOR_SCALE) : (modalLayout.show_barcode ? 185 : 216)))
     const elementHeight = activeDragElement === 'photo' ? (Number(modalLayout.photo_height) * EDITOR_SCALE) : (activeDragElement === 'barcode' ? (Number(modalLayout.barcode_height) * EDITOR_SCALE) : (activeDragElement === 'footer_logo' ? (Number(modalLayout.footer_logo_height) * EDITOR_SCALE) : (activeDragElement === 'nama' ? 35 : 24)))
 
     const clampedX = Math.max(-elementWidth / 2, Math.min(newLeftPx, rect.width - elementWidth / 2))
@@ -444,6 +444,116 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
       [`${activeDragElement}_top`]: percentY.toFixed(1)
     }))
   }
+
+  // Corner-handle resize (Canva-style) for elements with editable width/height
+  const RESIZE_LIMITS: Record<string, { minW: number; maxW: number; minH: number; maxH: number }> = {
+    photo: { minW: 40, maxW: 1500, minH: 40, maxH: 1500 },
+    barcode: { minW: 20, maxW: 400, minH: 20, maxH: 600 },
+    footer_logo: { minW: 40, maxW: 600, minH: 10, maxH: 300 }
+  }
+  const [resizingElement, setResizingElement] = useState<string | null>(null)
+  const [resizeStart, setResizeStart] = useState({ mouseX: 0, mouseY: 0, width: 0, height: 0 })
+
+  const handleResizeStart = (e: React.MouseEvent, element: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setResizeStart({
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      width: Number((modalLayout as any)[`${element}_width`]) || 0,
+      height: Number((modalLayout as any)[`${element}_height`]) || 0
+    })
+    setResizingElement(element)
+  }
+
+  const handleResizeMove = (e: React.MouseEvent) => {
+    if (!resizingElement) return
+    const limits = RESIZE_LIMITS[resizingElement]
+    if (!limits) return
+
+    const deltaWidthRaw = (e.clientX - resizeStart.mouseX) / EDITOR_SCALE
+    const deltaHeightRaw = (e.clientY - resizeStart.mouseY) / EDITOR_SCALE
+    const newWidth = Math.round(Math.max(limits.minW, Math.min(limits.maxW, resizeStart.width + deltaWidthRaw)))
+    const newHeight = Math.round(Math.max(limits.minH, Math.min(limits.maxH, resizeStart.height + deltaHeightRaw)))
+
+    setModalLayout(prev => ({
+      ...prev,
+      [`${resizingElement}_width`]: String(newWidth),
+      [`${resizingElement}_height`]: String(newHeight)
+    }))
+  }
+
+  const handleResizeTouchMove = (e: React.TouchEvent) => {
+    if (!resizingElement || e.touches.length === 0) return
+    const limits = RESIZE_LIMITS[resizingElement]
+    if (!limits) return
+
+    const deltaWidthRaw = (e.touches[0].clientX - resizeStart.mouseX) / EDITOR_SCALE
+    const deltaHeightRaw = (e.touches[0].clientY - resizeStart.mouseY) / EDITOR_SCALE
+    const newWidth = Math.round(Math.max(limits.minW, Math.min(limits.maxW, resizeStart.width + deltaWidthRaw)))
+    const newHeight = Math.round(Math.max(limits.minH, Math.min(limits.maxH, resizeStart.height + deltaHeightRaw)))
+
+    setModalLayout(prev => ({
+      ...prev,
+      [`${resizingElement}_width`]: String(newWidth),
+      [`${resizingElement}_height`]: String(newHeight)
+    }))
+  }
+
+  const handleResizeEnd = () => {
+    setResizingElement(null)
+  }
+
+  const handleResizeTouchStart = (e: React.TouchEvent, element: string) => {
+    e.stopPropagation()
+    if (e.touches.length === 0) return
+    setResizeStart({
+      mouseX: e.touches[0].clientX,
+      mouseY: e.touches[0].clientY,
+      width: Number((modalLayout as any)[`${element}_width`]) || 0,
+      height: Number((modalLayout as any)[`${element}_height`]) || 0
+    })
+    setResizingElement(element)
+  }
+
+  // Combined handlers on the preview canvas: route to resize while a handle is active, otherwise move-drag
+  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    if (resizingElement) { handleResizeMove(e); return }
+    handleDragMove(e)
+  }
+  const handleCanvasMouseUp = () => {
+    if (resizingElement) { handleResizeEnd(); return }
+    handleDragEnd()
+  }
+  const handleCanvasTouchMove = (e: React.TouchEvent) => {
+    if (resizingElement) { handleResizeTouchMove(e); return }
+    handleTouchMove(e)
+  }
+  const handleCanvasTouchEnd = () => {
+    if (resizingElement) { handleResizeEnd(); return }
+    handleDragEnd()
+  }
+
+  const ResizeHandle = ({ element }: { element: string }) => (
+    <div
+      onMouseDown={(e) => handleResizeStart(e, element)}
+      onTouchStart={(e) => handleResizeTouchStart(e, element)}
+      title="Seret untuk ubah ukuran"
+      style={{
+        position: 'absolute',
+        right: '-5px',
+        bottom: '-5px',
+        width: '12px',
+        height: '12px',
+        borderRadius: '3px',
+        background: '#4f46e5',
+        border: '2px solid #ffffff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+        cursor: 'nwse-resize',
+        zIndex: 30
+      }}
+    />
+  )
 
   // Quick Preset Layout Applicator
   const applyPreset = (preset: 'atmi' | 'karya-bakti') => {
@@ -1621,11 +1731,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                   {/* Interactive Card Canvas */}
                   <div 
                     ref={previewContainerRef}
-                    onMouseMove={handleDragMove}
-                    onMouseUp={handleDragEnd}
-                    onMouseLeave={handleDragEnd}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleDragEnd}
+                    onMouseMove={handleCanvasMouseMove}
+                    onMouseUp={handleCanvasMouseUp}
+                    onMouseLeave={handleCanvasMouseUp}
+                    onTouchMove={handleCanvasTouchMove}
+                    onTouchEnd={handleCanvasTouchEnd}
                     style={{
                       backgroundColor: modalLayout.card_bg_color === 'transparent' ? 'transparent' : (modalLayout.card_bg_color || '#ffffff')
                     }}
@@ -1654,7 +1764,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.jabatan_top}%`,
                           left: `${modalLayout.jabatan_left}%`,
-                          width: '216px',
+                          width: `${modalLayout.show_barcode ? 185 : 216}px`,
                           height: '24px',
                           display: 'flex',
                           alignItems: 'center',
@@ -1672,9 +1782,15 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             fontSize: `${modalLayout.jabatan_size || '11'}px`,
                             color: modalLayout.jabatan_color,
                             letterSpacing: '0.5px',
-                            textAlign: modalLayout.jabatan_align || 'center'
+                            lineHeight: '1.2',
+                            textAlign: modalLayout.jabatan_align || 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
                           }}
-                          className="truncate pointer-events-none"
+                          className="pointer-events-none"
                         >
                           JABATAN
                         </span>
@@ -1691,7 +1807,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.nik_top}%`,
                           left: `${modalLayout.nik_left}%`,
-                          width: '216px',
+                          width: `${modalLayout.show_barcode ? 185 : 216}px`,
                           height: '18px',
                           display: 'flex',
                           alignItems: 'center',
@@ -1743,6 +1859,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span className="text-[8px] font-bold text-slate-500 pointer-events-none">FOTO ({modalLayout.photo_width}x{modalLayout.photo_height})</span>
                         <Move className="w-4 h-4 text-indigo-650 absolute opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                        <ResizeHandle element="photo" />
                       </div>
                     )}
 
@@ -1755,7 +1872,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.nama_top}%`,
                           left: `${modalLayout.nama_left}%`,
-                          width: '216px',
+                          width: `${modalLayout.show_barcode ? 185 : 216}px`,
                           height: '35px',
                           display: 'flex',
                           alignItems: 'center',
@@ -1782,7 +1899,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical'
                           }}
-                          className="truncate pointer-events-none"
+                          className="pointer-events-none"
                         >
                           NAMA KARYAWAN
                         </span>
@@ -1834,6 +1951,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           ))}
                         </div>
                         <Move className="w-3 h-3 text-amber-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                        <ResizeHandle element="barcode" />
                       </div>
                     )}
 
@@ -1902,6 +2020,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           className="pointer-events-none"
                         />
                         <Move className="w-3 h-3 text-blue-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                        <ResizeHandle element="footer_logo" />
                       </div>
                     )}
                   </div>
@@ -2184,22 +2303,22 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
-                              <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                              <input type="number" min="40" max="1500" value={modalLayout.photo_width}
                                 onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
                                 className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
                             </div>
-                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
+                            <input type="range" min="40" max="1500" step="1" value={modalLayout.photo_width}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
-                              <input type="number" min="40" max="1200" value={modalLayout.photo_height}
+                              <input type="number" min="40" max="1500" value={modalLayout.photo_height}
                                 onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
                                 className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
                             </div>
-                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_height}
+                            <input type="range" min="40" max="1500" step="1" value={modalLayout.photo_height}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
@@ -2208,11 +2327,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
-                            <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                            <input type="number" min="40" max="1500" value={modalLayout.photo_width}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
                               className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
                           </div>
-                          <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
+                          <input type="range" min="40" max="1500" step="1" value={modalLayout.photo_width}
                             onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -2240,13 +2359,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.footer_logo_width}px)</label>
-                        <input type="range" min="40" max="300" step="1" value={modalLayout.footer_logo_width}
+                        <input type="range" min="40" max="600" step="1" value={modalLayout.footer_logo_width}
                           onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_width: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.footer_logo_height}px)</label>
-                        <input type="range" min="10" max="150" step="1" value={modalLayout.footer_logo_height}
+                        <input type="range" min="10" max="300" step="1" value={modalLayout.footer_logo_height}
                           onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_height: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
@@ -2290,13 +2409,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.barcode_width}px)</label>
-                        <input type="range" min="20" max="200" step="1" value={modalLayout.barcode_width}
+                        <input type="range" min="20" max="400" step="1" value={modalLayout.barcode_width}
                           onChange={e => setModalLayout(prev => ({ ...prev, barcode_width: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.barcode_height}px)</label>
-                        <input type="range" min="20" max="300" step="1" value={modalLayout.barcode_height}
+                        <input type="range" min="20" max="600" step="1" value={modalLayout.barcode_height}
                           onChange={e => setModalLayout(prev => ({ ...prev, barcode_height: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
@@ -2343,13 +2462,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Chip ({modalLayout.chip_width}px)</label>
-                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_width}
+                        <input type="range" min="20" max="300" step="1" value={modalLayout.chip_width}
                           onChange={e => setModalLayout(prev => ({ ...prev, chip_width: e.target.value }))}
                           className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Chip ({modalLayout.chip_height}px)</label>
-                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_height}
+                        <input type="range" min="20" max="300" step="1" value={modalLayout.chip_height}
                           onChange={e => setModalLayout(prev => ({ ...prev, chip_height: e.target.value }))}
                           className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
                       </div>
@@ -2490,7 +2609,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Jabatan</label>
                         <div className="space-y-1">
                           <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.jabatan_size || '11'}px</strong></label>
-                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
+                          <input type="range" min="8" max="48" step="0.5" value={modalLayout.jabatan_size || '11'}
                             onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -2515,7 +2634,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font NIK</label>
                         <div className="space-y-1">
                           <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nik_size || '10'}px</strong></label>
-                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
+                          <input type="range" min="8" max="48" step="0.5" value={modalLayout.nik_size || '10'}
                             onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -2540,7 +2659,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Nama</label>
                         <div className="space-y-1">
                           <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nama_size || '13'}px</strong></label>
-                          <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
+                          <input type="range" min="8" max="48" step="0.5" value={modalLayout.nama_size || '13'}
                             onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -2624,11 +2743,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                   {/* Interactive Card Canvas */}
                   <div 
                     ref={previewContainerRef}
-                    onMouseMove={handleDragMove}
-                    onMouseUp={handleDragEnd}
-                    onMouseLeave={handleDragEnd}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleDragEnd}
+                    onMouseMove={handleCanvasMouseMove}
+                    onMouseUp={handleCanvasMouseUp}
+                    onMouseLeave={handleCanvasMouseUp}
+                    onTouchMove={handleCanvasTouchMove}
+                    onTouchEnd={handleCanvasTouchEnd}
                     style={{
                       backgroundColor: modalLayout.card_bg_color === 'transparent' ? 'transparent' : (modalLayout.card_bg_color || '#ffffff')
                     }}
@@ -2662,7 +2781,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.jabatan_top}%`,
                           left: `${modalLayout.jabatan_left}%`,
-                          width: '216px',
+                          width: `${modalLayout.show_barcode ? 185 : 216}px`,
                           height: '24px',
                           display: 'flex',
                           alignItems: 'center',
@@ -2680,9 +2799,15 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             fontSize: `${modalLayout.jabatan_size || '11'}px`,
                             color: modalLayout.jabatan_color,
                             letterSpacing: '0.5px',
-                            textAlign: modalLayout.jabatan_align || 'center'
+                            lineHeight: '1.2',
+                            textAlign: modalLayout.jabatan_align || 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
                           }}
-                          className="truncate pointer-events-none"
+                          className="pointer-events-none"
                         >
                           JABATAN
                         </span>
@@ -2699,7 +2824,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.nik_top}%`,
                           left: `${modalLayout.nik_left}%`,
-                          width: '216px',
+                          width: `${modalLayout.show_barcode ? 185 : 216}px`,
                           height: '18px',
                           display: 'flex',
                           alignItems: 'center',
@@ -2750,6 +2875,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span className="text-[8px] font-bold text-slate-500 pointer-events-none">FOTO ({modalLayout.photo_width}x{modalLayout.photo_height})</span>
                         <Move className="w-4 h-4 text-indigo-650 absolute opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                        <ResizeHandle element="photo" />
                       </div>
                     )}
 
@@ -2762,7 +2888,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           position: 'absolute',
                           top: `${modalLayout.nama_top}%`,
                           left: `${modalLayout.nama_left}%`,
-                          width: '216px',
+                          width: `${modalLayout.show_barcode ? 185 : 216}px`,
                           height: '35px',
                           display: 'flex',
                           alignItems: 'center',
@@ -2789,7 +2915,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical'
                           }}
-                          className="truncate pointer-events-none"
+                          className="pointer-events-none"
                         >
                           NAMA KARYAWAN
                         </span>
@@ -2841,6 +2967,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           ))}
                         </div>
                         <Move className="w-3 h-3 text-amber-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                        <ResizeHandle element="barcode" />
                       </div>
                     )}
 
@@ -2909,6 +3036,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           className="pointer-events-none"
                         />
                         <Move className="w-3 h-3 text-blue-500 absolute right-1 opacity-0 group-hover:opacity-100 transition pointer-events-none" />
+                        <ResizeHandle element="footer_logo" />
                       </div>
                     )}
                   </div>
@@ -3244,22 +3372,22 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Foto ({modalLayout.photo_width}px)</label>
-                              <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                              <input type="number" min="40" max="1500" value={modalLayout.photo_width}
                                 onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
                                 className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
                             </div>
-                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
+                            <input type="range" min="40" max="1500" step="1" value={modalLayout.photo_width}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Foto ({modalLayout.photo_height}px)</label>
-                              <input type="number" min="40" max="1200" value={modalLayout.photo_height}
+                              <input type="number" min="40" max="1500" value={modalLayout.photo_height}
                                 onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
                                 className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
                             </div>
-                            <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_height}
+                            <input type="range" min="40" max="1500" step="1" value={modalLayout.photo_height}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_height: e.target.value }))}
                               className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                           </div>
@@ -3268,11 +3396,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
                             <label className="text-[9px] font-bold text-slate-600 uppercase block">Ukuran Foto ({modalLayout.photo_width}px)</label>
-                            <input type="number" min="40" max="1200" value={modalLayout.photo_width}
+                            <input type="number" min="40" max="1500" value={modalLayout.photo_width}
                               onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
                               className="w-16 px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-[10px] text-right font-mono outline-none focus:border-indigo-500" />
                           </div>
-                          <input type="range" min="40" max="1000" step="1" value={modalLayout.photo_width}
+                          <input type="range" min="40" max="1500" step="1" value={modalLayout.photo_width}
                             onChange={e => setModalLayout(prev => ({ ...prev, photo_width: e.target.value, photo_height: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -3300,13 +3428,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.footer_logo_width}px)</label>
-                        <input type="range" min="40" max="300" step="1" value={modalLayout.footer_logo_width}
+                        <input type="range" min="40" max="600" step="1" value={modalLayout.footer_logo_width}
                           onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_width: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.footer_logo_height}px)</label>
-                        <input type="range" min="10" max="150" step="1" value={modalLayout.footer_logo_height}
+                        <input type="range" min="10" max="300" step="1" value={modalLayout.footer_logo_height}
                           onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_height: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
@@ -3350,13 +3478,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar ({modalLayout.barcode_width}px)</label>
-                        <input type="range" min="20" max="200" step="1" value={modalLayout.barcode_width}
+                        <input type="range" min="20" max="400" step="1" value={modalLayout.barcode_width}
                           onChange={e => setModalLayout(prev => ({ ...prev, barcode_width: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi ({modalLayout.barcode_height}px)</label>
-                        <input type="range" min="20" max="300" step="1" value={modalLayout.barcode_height}
+                        <input type="range" min="20" max="600" step="1" value={modalLayout.barcode_height}
                           onChange={e => setModalLayout(prev => ({ ...prev, barcode_height: e.target.value }))}
                           className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                       </div>
@@ -3403,13 +3531,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Lebar Chip ({modalLayout.chip_width}px)</label>
-                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_width}
+                        <input type="range" min="20" max="300" step="1" value={modalLayout.chip_width}
                           onChange={e => setModalLayout(prev => ({ ...prev, chip_width: e.target.value }))}
                           className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Tinggi Chip ({modalLayout.chip_height}px)</label>
-                        <input type="range" min="20" max="150" step="1" value={modalLayout.chip_height}
+                        <input type="range" min="20" max="300" step="1" value={modalLayout.chip_height}
                           onChange={e => setModalLayout(prev => ({ ...prev, chip_height: e.target.value }))}
                           className="w-full h-1 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
                       </div>
@@ -3550,7 +3678,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Jabatan</label>
                         <div className="space-y-1">
                           <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.jabatan_size || '11'}px</strong></label>
-                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.jabatan_size || '11'}
+                          <input type="range" min="8" max="48" step="0.5" value={modalLayout.jabatan_size || '11'}
                             onChange={e => setModalLayout(prev => ({ ...prev, jabatan_size: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -3575,7 +3703,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font NIK</label>
                         <div className="space-y-1">
                           <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nik_size || '10'}px</strong></label>
-                          <input type="range" min="8" max="24" step="0.5" value={modalLayout.nik_size || '10'}
+                          <input type="range" min="8" max="48" step="0.5" value={modalLayout.nik_size || '10'}
                             onChange={e => setModalLayout(prev => ({ ...prev, nik_size: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
@@ -3600,7 +3728,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         <label className="text-[10px] font-bold text-indigo-700 uppercase block">Font Nama</label>
                         <div className="space-y-1">
                           <label className="text-[9px] text-slate-500 font-medium block">Ukuran: <strong className="text-slate-800">{modalLayout.nama_size || '13'}px</strong></label>
-                          <input type="range" min="8" max="28" step="0.5" value={modalLayout.nama_size || '13'}
+                          <input type="range" min="8" max="48" step="0.5" value={modalLayout.nama_size || '13'}
                             onChange={e => setModalLayout(prev => ({ ...prev, nama_size: e.target.value }))}
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>

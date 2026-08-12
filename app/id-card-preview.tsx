@@ -40,6 +40,34 @@ export function formatNameLines(name: string, maxWordsPerLine: number = 2): stri
   return lines.join('\n');
 }
 
+let measureCanvas: HTMLCanvasElement | null = null;
+
+// Shrinks font size (down to minFontPx) until `text` fits within maxWidthPx on one line.
+function fitSingleLineFontSize(
+  text: string,
+  maxWidthPx: number,
+  baseFontPx: number,
+  fontWeight: string | number,
+  fontFamily: string,
+  letterSpacingPx: number,
+  minFontPx: number
+): number {
+  if (typeof document === 'undefined' || !text) return baseFontPx;
+  if (!measureCanvas) measureCanvas = document.createElement('canvas');
+  const ctx = measureCanvas.getContext('2d');
+  if (!ctx) return baseFontPx;
+
+  const upperText = text.toUpperCase();
+  let fontPx = baseFontPx;
+  while (fontPx > minFontPx) {
+    ctx.font = `${fontWeight} ${fontPx}px ${fontFamily}`;
+    const width = ctx.measureText(upperText).width + letterSpacingPx * Math.max(0, upperText.length - 1);
+    if (width <= maxWidthPx) break;
+    fontPx -= 0.5;
+  }
+  return fontPx;
+}
+
 // Dynamic Barcode Generator (Renders 90° rotated vertical PNG image directly on 2D Canvas)
 // Eliminates CSS transform flattening bugs in browser print engines (Chrome/Edge @media print)
 const Barcode = ({ 
@@ -602,8 +630,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       // Barcode positioning & styling
       const posBarcode = config?.barcode_top !== undefined ? `${config.barcode_top}%` : '10%'
       const posBarcodeLeft = config?.barcode_left !== undefined ? `${config.barcode_left}%` : '75%'
-      const barcodeRawW = config?.barcode_width !== undefined ? Math.round(Number(config.barcode_width) * SCALE) : 48
-      const barcodeRawH = config?.barcode_height !== undefined ? Math.round(Number(config.barcode_height) * SCALE) : 210
+      const barcodeRawW = config?.barcode_width !== undefined ? Number(config.barcode_width) : 48
+      const barcodeRawH = config?.barcode_height !== undefined ? Number(config.barcode_height) : 210
       const barcodeW = `${barcodeRawW}px`
       const barcodeH = `${barcodeRawH}px`
       const barcodeRotation = config?.barcode_rotation !== undefined ? Number(config.barcode_rotation) : 0
@@ -613,8 +641,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const showChip = config?.show_chip !== undefined ? !!config.show_chip : false
       const posChipTop = config?.chip_top !== undefined ? `${config.chip_top}%` : '20%'
       const posChipLeft = config?.chip_left !== undefined ? `${config.chip_left}%` : '68%'
-      const chipRawW = config?.chip_width !== undefined ? Math.round(Number(config.chip_width) * SCALE) : 52
-      const chipRawH = config?.chip_height !== undefined ? Math.round(Number(config.chip_height) * SCALE) : 44
+      const chipRawW = config?.chip_width !== undefined ? Number(config.chip_width) : 52
+      const chipRawH = config?.chip_height !== undefined ? Number(config.chip_height) : 44
       const chipW = `${chipRawW}px`
       const chipH = `${chipRawH}px`
 
@@ -624,8 +652,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const showFooterLogo = isPoltekUnit ? (config?.show_footer_logo !== undefined ? !!config.show_footer_logo : true) : false
       const posFooterLogoTop = config?.footer_logo_top !== undefined ? `${config.footer_logo_top}%` : '77%'
       const posFooterLogoLeft = config?.footer_logo_left !== undefined ? `${config.footer_logo_left}%` : '0%'
-      const footerLogoRawW = config?.footer_logo_width !== undefined ? Math.round(Number(config.footer_logo_width) * SCALE) : 320
-      const footerLogoRawH = config?.footer_logo_height !== undefined ? Math.round(Number(config.footer_logo_height) * SCALE) : 74
+      const footerLogoRawW = config?.footer_logo_width !== undefined ? Number(config.footer_logo_width) : 320
+      const footerLogoRawH = config?.footer_logo_height !== undefined ? Number(config.footer_logo_height) : 74
       const footerLogoW = `${footerLogoRawW}px`
       const footerLogoH = `${footerLogoRawH}px`
       const footerLogoBg = config?.footer_logo_bg !== undefined ? config.footer_logo_bg : 'transparent'
@@ -642,6 +670,14 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const jabatanH = Math.round(24 * SCALE)      // 32
       const nikH = Math.round(18 * SCALE)           // 24
       const namaH = Math.round(35 * SCALE)          // 47
+
+      const namaFontFamily = config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif"
+      const namaBaseFontPx = Math.round(Number(config?.nama_size || 13) * SCALE)
+      const namaText = data.nama || (isExport ? '' : 'IKA')
+      // Poltek renders the name on one line, so shrink it to fit rather than wrapping/cutting it off.
+      const namaFontPx = isPoltekUnit
+        ? fitSingleLineFontSize(namaText, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, Math.max(9, Math.round(namaBaseFontPx * 0.5)))
+        : namaBaseFontPx
 
       return (
         <div 
@@ -793,24 +829,43 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               }}
             >
               <span
-                style={{
-                  fontFamily: config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
-                  fontWeight: config?.nama_weight || '700',
-                  fontSize: `${Math.round(Number(config?.nama_size || 13) * SCALE)}px`,
-                  color: namaColor,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  lineHeight: '0.85',
-                  textAlign: config?.nama_align || 'center',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
-                  whiteSpace: 'pre-line'
-                }}
+                style={
+                  isPoltekUnit
+                    ? {
+                        fontFamily: namaFontFamily,
+                        fontWeight: config?.nama_weight || '700',
+                        fontSize: `${namaFontPx}px`,
+                        color: namaColor,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        lineHeight: '0.85',
+                        textAlign: config?.nama_align || 'center',
+                        width: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }
+                    : {
+                        fontFamily: config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
+                        fontWeight: config?.nama_weight || '700',
+                        fontSize: `${Math.round(Number(config?.nama_size || 13) * SCALE)}px`,
+                        color: namaColor,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        lineHeight: '0.85',
+                        textAlign: config?.nama_align || 'center',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 4,
+                        WebkitBoxOrient: 'vertical',
+                        whiteSpace: 'pre-line'
+                      }
+                }
               >
-                {data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA'))}
+                {isPoltekUnit
+                  ? namaText
+                  : (data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA')))}
               </span>
             </div>
           )}
@@ -827,31 +882,32 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 zIndex: 5,
                 transform: `rotate(${barcodeRotation}deg)`,
                 transformOrigin: 'center center',
-                filter: 'drop-shadow(0px 0px 4px #ffffff)'
+                filter: 'drop-shadow(0px 0px 4px #ffffff)',
+                // Border + radius live on this wrapper (not the <img>) — html2canvas clips
+                // overflow:hidden + border-radius reliably on plain divs, same as the photo frame.
+                ...(isPoltekUnit
+                  ? { border: '4px solid #ffffff', borderRadius: '6px', boxSizing: 'border-box' as const, overflow: 'hidden' as const }
+                  : { outline: '4px solid #ffffff', boxSizing: 'border-box' as const })
               }}
             >
               {barcodeUrl ? (
-                <img 
-                  src={barcodeUrl} 
-                  alt="Barcode" 
+                <img
+                  src={barcodeUrl}
+                  alt="Barcode"
                   style={{
                     display: 'block',
                     width: '100%',
                     height: '100%',
-                    objectFit: 'fill',
-                    outline: '4px solid #ffffff',
-                    boxSizing: 'border-box'
+                    objectFit: 'contain'
                   }}
                 />
               ) : (
-                <div style={{ outline: '4px solid #ffffff', width: '100%', height: '100%', boxSizing: 'border-box' }}>
-                  <Barcode 
-                    value={data.barcode && data.barcode !== 'indexeddb' ? data.barcode : '1234567890'} 
-                    width="100%"
-                    height="100%"
-                    color={barcodeColor}
-                  />
-                </div>
+                <Barcode
+                  value={data.barcode && data.barcode !== 'indexeddb' ? data.barcode : '1234567890'}
+                  width="100%"
+                  height="100%"
+                  color={barcodeColor}
+                />
               )}
             </div>
           )}

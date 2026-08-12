@@ -31,7 +31,7 @@ export default function QZPrinterControl({
   const CR80_RATIO = CR80_WIDTH_MM / CR80_HEIGHT_MM;
   const DEFAULT_HORIZONTAL_BLEED_MM = 0.8;
   const DEFAULT_VERTICAL_BLEED_MM = 0.8;
-  const MAX_VERTICAL_NUDGE_MM = 0.6;
+  const MAX_VERTICAL_NUDGE_MM = 1.8;
   const MAX_HORIZONTAL_NUDGE_MM = 0.8;
   // Asymmetric extras to help cover printer non-printable edges
   const EXTRA_RIGHT_MM = 1.0; // extend drawing to the right by ~1mm
@@ -54,6 +54,7 @@ export default function QZPrinterControl({
   } = useQZTray();
 
   const [printingSide, setPrintingSide] = useState<'front' | 'back' | 'both' | null>(null);
+  const [printAsIs, setPrintAsIs] = useState<boolean>(true);
   const [verticalNudgeMm, setVerticalNudgeMm] = useState<number>(0);
   const [horizontalNudgeMm, setHorizontalNudgeMm] = useState<number>(0);
   const [horizontalBleedMm, setHorizontalBleedMm] = useState<number>(DEFAULT_HORIZONTAL_BLEED_MM);
@@ -180,6 +181,62 @@ export default function QZPrinterControl({
     return out;
   };
 
+  // Small symmetric safety margin kept even in "as-is" mode so a slightly
+  // out-of-registration printer still lays ink to the card edge instead of
+  // leaving a blank strip. Deliberately much smaller than the old bleed
+  // (0.8-1.8mm) so it stays visually indistinguishable from the preview.
+  const WYSIWYG_SAFETY_BLEED_MM = 0.3;
+
+  // Resize/crop to the exact print pixel dimensions (matching the mm page config QZ expects)
+  // with only the small safety bleed above — no nudge/shift/corner rounding — "as-is" WYSIWYG output.
+  const resizeCanvasToExactCard = (source: HTMLCanvasElement): HTMLCanvasElement => {
+    const srcW = source.width;
+    const srcH = source.height;
+    const srcRatio = srcW / srcH;
+
+    let cropW = srcW;
+    let cropH = srcH;
+    let cropX = 0;
+    let cropY = 0;
+
+    if (srcRatio > CR80_RATIO) {
+      cropW = Math.round(srcH * CR80_RATIO);
+      cropX = Math.round((srcW - cropW) / 2);
+    } else if (srcRatio < CR80_RATIO) {
+      cropH = Math.round(srcW / CR80_RATIO);
+      cropY = Math.round((srcH - cropH) / 2);
+    }
+
+    const targetW = Math.round((CR80_WIDTH_MM / 25.4) * 300);
+    const targetH = Math.round((CR80_HEIGHT_MM / 25.4) * 300);
+    const safetyBleedPx = Math.round((WYSIWYG_SAFETY_BLEED_MM / 25.4) * 300);
+
+    const out = document.createElement('canvas');
+    out.width = targetW;
+    out.height = targetH;
+
+    const ctx = out.getContext('2d');
+    if (!ctx) return source;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(
+      source,
+      cropX,
+      cropY,
+      cropW,
+      cropH,
+      -safetyBleedPx,
+      -safetyBleedPx,
+      targetW + safetyBleedPx * 2,
+      targetH + safetyBleedPx * 2
+    );
+
+    return out;
+  };
+
   /**
    * Converts targeted HTML element to Base64 PNG image string at 300 DPI for Fargo printer
    */
@@ -211,6 +268,12 @@ export default function QZPrinterControl({
         clonedElement.style.top = '0';
       }
     });
+
+    if (printAsIs) {
+      // WYSIWYG: same crop/DPI resize QZ needs to size the page correctly, but no bleed/nudge/corner-clip.
+      const exact = resizeCanvasToExactCard(canvas);
+      return exact.toDataURL('image/png');
+    }
 
     const normalized = normalizeCanvasToCardAspect(canvas);
     return normalized.toDataURL('image/png');
@@ -352,6 +415,24 @@ export default function QZPrinterControl({
         </select>
       </div>
 
+      {/* WYSIWYG Toggle */}
+      <div className="pt-2 border-t border-slate-100">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={printAsIs}
+            onChange={(e) => setPrintAsIs(e.target.checked)}
+            className="mt-0.5 rounded border-slate-300 text-indigo-650 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+          />
+          <span>
+            <span className="text-xs font-bold text-slate-800 block">Cetak Apa Adanya (Sesuai Preview)</span>
+            <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
+              Kirim hasil tangkapan kartu sesuai preview (plus safety bleed kecil 0.3mm di semua sisi supaya tepi kartu tetap tercetak penuh). Matikan opsi ini kalau printer fisik masih menyisakan garis putih dan Anda ingin kalibrasi bleed/geser manual yang lebih besar.
+            </span>
+          </span>
+        </label>
+      </div>
+
       {/* Action Printing Buttons */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
         <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
@@ -387,6 +468,13 @@ export default function QZPrinterControl({
         </div>
       </div>
 
+      {/* Calibration controls (ignored while "Cetak Apa Adanya" is on) */}
+      <div className={printAsIs ? 'opacity-40 pointer-events-none' : undefined}>
+      {printAsIs && (
+        <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-2">
+          Kalibrasi di bawah ini nonaktif selama &quot;Cetak Apa Adanya&quot; menyala.
+        </div>
+      )}
       {/* Vertical Alignment Calibration */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
         <div className="flex items-center justify-between">
@@ -473,6 +561,7 @@ export default function QZPrinterControl({
             <div className="text-[11px] font-mono text-slate-700 mt-1">Bleed: {horizontalBleedMm.toFixed(2)} mm</div>
           </div>
         </div>
+      </div>
 
       {/* Error Notification Toast */}
       {error && (
