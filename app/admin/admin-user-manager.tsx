@@ -2,12 +2,14 @@
 
 import React, { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   Plus, Pencil, Trash2, X, UserPlus, Save,
   AlertTriangle, CheckCircle2, Loader2, Mail,
   Lock, User, Users, Building, Search, SlidersHorizontal,
   Upload, FileImage, Folder, Eye, Trash,
-  LayoutDashboard, Shield, Menu, LogOut, ShieldAlert, Move, Cpu
+  LayoutDashboard, Shield, Menu, LogOut, ShieldAlert, Move, Cpu,
+  CreditCard, ChevronDown
 } from 'lucide-react'
 import { signOutAction } from '../auth-actions'
 import {
@@ -84,6 +86,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
   // Active Tab state
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'units'>('overview')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [createCardMenuOpen, setCreateCardMenuOpen] = useState(false)
 
   // Unit Modal states
   const [showCreateUnit, setShowCreateUnit] = useState(false)
@@ -946,6 +949,37 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
             <Building className="w-4.5 h-4.5" />
             <span>Kelola Unit & Desain</span>
           </button>
+
+          {/* Buat Kartu ID (parent, expands into per-unit links) */}
+          <div>
+            <button
+              onClick={() => setCreateCardMenuOpen(v => !v)}
+              className="w-full px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-3 transition cursor-pointer text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+            >
+              <CreditCard className="w-4.5 h-4.5" />
+              <span className="flex-1 text-left">Buat Kartu ID</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${createCardMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {createCardMenuOpen && (
+              <div className="mt-1 ml-4 pl-3 border-l border-slate-800 space-y-1">
+                {localUnits.length === 0 ? (
+                  <p className="px-3 py-2 text-[11px] text-slate-500">Belum ada unit terdaftar.</p>
+                ) : (
+                  localUnits.map(unit => (
+                    <Link
+                      key={unit.id}
+                      href={`/admin/create-card?unit=${unit.id}`}
+                      onClick={() => setSidebarOpen(false)}
+                      className="block px-3 py-2 rounded-lg text-[11px] font-medium text-slate-400 hover:bg-slate-800/60 hover:text-white transition truncate"
+                    >
+                      {unit.nama}
+                    </Link>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Sidebar Footer (Profile info & Log Out) */}
