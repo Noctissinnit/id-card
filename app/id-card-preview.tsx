@@ -68,6 +68,40 @@ function fitSingleLineFontSize(
   return fontPx;
 }
 
+// Normalizes an uploaded barcode photo so it always displays vertically (portrait):
+// if the source image is landscape (wider than tall), rotate it 90° clockwise via
+// canvas so it reads top-to-bottom like the barcode slot expects. Already-portrait
+// images pass through untouched.
+function rotateImageToPortrait(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !dataUrl) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = document.createElement('img');
+    img.onload = () => {
+      if (img.naturalWidth <= img.naturalHeight) {
+        resolve(dataUrl);
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalHeight;
+      canvas.height = img.naturalWidth;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.translate(canvas.width, 0);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // Dynamic Barcode Generator (Renders 90° rotated vertical PNG image directly on 2D Canvas)
 // Eliminates CSS transform flattening bugs in browser print engines (Chrome/Edge @media print)
 const Barcode = ({ 
@@ -344,6 +378,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   const [isFlipped, setIsFlipped] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [barcodeUrl, setBarcodeUrl] = useState<string>('');
+  const [portraitBarcodeUrl, setPortraitBarcodeUrl] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
 
   const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase();
@@ -370,7 +405,23 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       setBarcodeUrl(data.barcode);
     }
   }, [data.photoUrl, data.barcode]);
-  
+
+  // Whatever orientation the uploaded barcode photo was taken/saved in, normalize
+  // it to portrait so it always fills the (tall, narrow) barcode slot correctly.
+  useEffect(() => {
+    if (!barcodeUrl) {
+      setPortraitBarcodeUrl('');
+      return;
+    }
+    let cancelled = false;
+    rotateImageToPortrait(barcodeUrl).then((result) => {
+      if (!cancelled) setPortraitBarcodeUrl(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [barcodeUrl]);
+
   const handleReset = async () => {
     await deletePhoto('id_card_photo');
     await deletePhoto('id_card_barcode');
@@ -892,7 +943,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             >
               {barcodeUrl ? (
                 <img
-                  src={barcodeUrl}
+                  src={portraitBarcodeUrl || barcodeUrl}
                   alt="Barcode"
                   style={{
                     display: 'block',

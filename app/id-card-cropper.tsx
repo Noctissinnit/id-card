@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
-import { ZoomIn, ZoomOut, Scissors, X, Sparkles } from 'lucide-react';
+import { Scissors, X, Sparkles } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 // @ts-expect-error - onnxruntime-web types exist but can't be resolved via package.json "exports"
 import * as ort from 'onnxruntime-web';
@@ -105,9 +105,11 @@ const applyBackgroundColor = (base64Image: string, color: string): Promise<strin
     img.src = base64Image;
   });
 
+// Photo scale is fixed — the user can only reposition (drag) the photo, not zoom it.
+const FIXED_ZOOM = 1;
+
 export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', onCropComplete, onCancel }: IDCardCropperProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [removeBg, setRemoveBg] = useState(false);
   const [bgColor, setBgColor] = useState<string>(defaultBgColor);
@@ -218,10 +220,6 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', on
     setCrop(newCrop);
   };
 
-  const onZoomChange = (newZoom: number) => {
-    setZoom(newZoom);
-  };
-
   const onCropCompleteHandler = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
@@ -272,12 +270,14 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', on
           <Cropper
             image={cropperImage}
             crop={crop}
-            zoom={zoom}
+            zoom={FIXED_ZOOM}
+            minZoom={FIXED_ZOOM}
+            maxZoom={FIXED_ZOOM}
+            zoomWithScroll={false}
             aspect={1} // Square aspect ratio since we crop to circle
             cropShape="round" // Round mask to match ID Card circle perfectly
             showGrid={true}
             onCropChange={onCropChange}
-            onZoomChange={onZoomChange}
             onCropComplete={onCropCompleteHandler}
             classes={{
               containerClassName: 'rounded-2xl',
@@ -319,36 +319,10 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', on
           )}
         </div>
 
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-3 py-5 w-full text-slate-700 font-medium px-1">
-          <button 
-            onClick={() => setZoom(Math.max(1, zoom - 0.2))}
-            disabled={loading}
-            className="text-slate-400 hover:text-indigo-600 transition p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer disabled:opacity-50"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          
-          <input
-            type="range"
-            value={zoom}
-            min={1}
-            max={3}
-            step={0.1}
-            aria-label="Zoom"
-            disabled={loading}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-grow h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-50"
-          />
-
-          <button 
-            onClick={() => setZoom(Math.min(3, zoom + 0.2))}
-            disabled={loading}
-            className="text-slate-400 hover:text-indigo-600 transition p-1.5 hover:bg-slate-50 rounded-lg cursor-pointer disabled:opacity-50"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Position hint — zoom is fixed, only repositioning (drag) is allowed */}
+        <p className="w-full py-4 px-1 text-xs text-slate-500 text-center">
+          Geser foto di dalam bingkai untuk mengatur posisinya. Ukuran foto sudah ditetapkan.
+        </p>
 
         {/* BG Removal Option */}
         <div className="flex flex-col gap-3 pb-4 w-full items-start px-2">
