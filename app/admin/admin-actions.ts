@@ -72,6 +72,8 @@ export async function createUserAction(formData: FormData) {
     const password = formData.get('password') as string
     const name = formData.get('name') as string
     const unitId = formData.get('unit_id') ? Number(formData.get('unit_id')) : null
+    const requestedRole = formData.get('role') as string
+    const role = requestedRole === 'admin' ? 'admin' : 'user'
 
     if (!username || !password) {
       return { error: 'Username dan password wajib diisi.' }
@@ -108,7 +110,7 @@ export async function createUserAction(formData: FormData) {
     const detailPayload: any = {
       user_id: authData.user.id,
       unit_id: unitId,
-      role: 'user', // Always create as regular user
+      role,
     }
 
     let detailError;
@@ -119,6 +121,7 @@ export async function createUserAction(formData: FormData) {
         .from('user_details')
         .update({
           unit_id: unitId,
+          role,
           username: username.toLowerCase().trim()
         })
         .eq('user_id', authData.user.id)
@@ -127,7 +130,7 @@ export async function createUserAction(formData: FormData) {
         if (updateError.message.includes('column') && updateError.message.includes('username')) {
           const { error: retryError } = await admin
             .from('user_details')
-            .update({ unit_id: unitId })
+            .update({ unit_id: unitId, role })
             .eq('user_id', authData.user.id)
           detailError = retryError
         } else {

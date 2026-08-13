@@ -68,36 +68,122 @@ function fitSingleLineFontSize(
   return fontPx;
 }
 
+interface OrientedImage {
+  url: string;
+  width: number;
+  height: number;
+}
+
+// Crops away any near-white/transparent margin baked into the source photo so the
+// returned canvas's bounds match the actual barcode ink, not the photo's own edges.
+function trimImageWhitespace(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const { width, height } = canvas;
+  if (width === 0 || height === 0) return canvas;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+
+  let imageData: ImageData;
+  try {
+    imageData = ctx.getImageData(0, 0, width, height);
+  } catch {
+    return canvas; // shouldn't happen for data: URLs, but bail out safely if it does
+  }
+  const data = imageData.data;
+
+  const isInk = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    if (data[i + 3] < 10) return false;
+    const luminance = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    return luminance < 180;
+  };
+
+  // Require a meaningful fraction of ink pixels along a row/column before
+  // treating it as barcode content — a single stray dark pixel (JPEG noise,
+  // a scan artifact) shouldn't be enough to drag the crop boundary outward.
+  const rowInkThreshold = Math.max(3, Math.round(width * 0.05));
+  let minY = height;
+  let maxY = -1;
+  for (let y = 0; y < height; y++) {
+    let count = 0;
+    for (let x = 0; x < width && count < rowInkThreshold; x++) {
+      if (isInk(x, y)) count++;
+    }
+    if (count >= rowInkThreshold) {
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  const colInkThreshold = Math.max(3, Math.round(height * 0.02));
+  let minX = width;
+  let maxX = -1;
+  for (let x = 0; x < width; x++) {
+    let count = 0;
+    for (let y = 0; y < height && count < colInkThreshold; y++) {
+      if (isInk(x, y)) count++;
+    }
+    if (count >= colInkThreshold) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return canvas; // no ink found — leave untouched
+
+  const PAD = 1;
+  const cropX = Math.max(0, minX - PAD);
+  const cropY = Math.max(0, minY - PAD);
+  const cropW = Math.min(width, maxX + PAD + 1) - cropX;
+  const cropH = Math.min(height, maxY + PAD + 1) - cropY;
+  if (cropW <= 0 || cropH <= 0 || (cropX === 0 && cropY === 0 && cropW === width && cropH === height)) {
+    return canvas; // already tight — nothing to trim
+  }
+
+  const trimmed = document.createElement('canvas');
+  trimmed.width = cropW;
+  trimmed.height = cropH;
+  const tctx = trimmed.getContext('2d');
+  if (!tctx) return canvas;
+  tctx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+  return trimmed;
+}
+
 // Normalizes an uploaded barcode photo so it always displays vertically (portrait):
 // if the source image is landscape (wider than tall), rotate it 90° clockwise via
-// canvas so it reads top-to-bottom like the barcode slot expects. Already-portrait
-// images pass through untouched.
-function rotateImageToPortrait(dataUrl: string): Promise<string> {
+// canvas so it reads top-to-bottom like the barcode slot expects. Then trims any
+// white/blank margin baked into the source photo so the reported width/height match
+// the actual barcode ink, not the photo's outer edges.
+function rotateImageToPortrait(dataUrl: string): Promise<OrientedImage> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || !dataUrl) {
-      resolve(dataUrl);
+      resolve({ url: dataUrl, width: 0, height: 0 });
       return;
     }
     const img = document.createElement('img');
     img.onload = () => {
-      if (img.naturalWidth <= img.naturalHeight) {
-        resolve(dataUrl);
-        return;
-      }
+      const needsRotation = img.naturalWidth > img.naturalHeight;
       const canvas = document.createElement('canvas');
-      canvas.width = img.naturalHeight;
-      canvas.height = img.naturalWidth;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        resolve(dataUrl);
+        resolve({ url: dataUrl, width: img.naturalWidth, height: img.naturalHeight });
         return;
       }
-      ctx.translate(canvas.width, 0);
-      ctx.rotate(Math.PI / 2);
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      if (needsRotation) {
+        canvas.width = img.naturalHeight;
+        canvas.height = img.naturalWidth;
+        ctx.translate(canvas.width, 0);
+        ctx.rotate(Math.PI / 2);
+        ctx.drawImage(img, 0, 0);
+      } else {
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0);
+      }
+
+      const trimmed = trimImageWhitespace(canvas);
+      resolve({ url: trimmed.toDataURL('image/png'), width: trimmed.width, height: trimmed.height });
     };
-    img.onerror = () => resolve(dataUrl);
+    img.onerror = () => resolve({ url: dataUrl, width: 0, height: 0 });
     img.src = dataUrl;
   });
 }
@@ -379,6 +465,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [barcodeUrl, setBarcodeUrl] = useState<string>('');
   const [portraitBarcodeUrl, setPortraitBarcodeUrl] = useState<string>('');
+  const [barcodeNaturalSize, setBarcodeNaturalSize] = useState<{ width: number; height: number } | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase();
@@ -411,11 +498,14 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   useEffect(() => {
     if (!barcodeUrl) {
       setPortraitBarcodeUrl('');
+      setBarcodeNaturalSize(null);
       return;
     }
     let cancelled = false;
     rotateImageToPortrait(barcodeUrl).then((result) => {
-      if (!cancelled) setPortraitBarcodeUrl(result);
+      if (cancelled) return;
+      setPortraitBarcodeUrl(result.url);
+      setBarcodeNaturalSize(result.width && result.height ? { width: result.width, height: result.height } : null);
     });
     return () => {
       cancelled = true;
@@ -688,6 +778,29 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const barcodeRotation = config?.barcode_rotation !== undefined ? Number(config.barcode_rotation) : 0
       const barcodeColor = config?.barcode_color ? config.barcode_color : '#000000'
 
+      // When the uploaded barcode photo's own aspect ratio doesn't match the
+      // configured slot, size the frame to the barcode's actual rendered size
+      // instead of the full slot, so the outline hugs the barcode instead of
+      // leaving empty white space. Always fill the configured WIDTH first (the
+      // barcode's visual "thickness" stays consistent with what the admin set)
+      // and derive the height from the barcode's true aspect ratio — only
+      // falling back to shrinking the width too if that height would overflow
+      // the configured slot.
+      let barcodeFrameW = barcodeRawW
+      let barcodeFrameH = barcodeRawH
+      if (barcodeUrl && barcodeNaturalSize && barcodeNaturalSize.width > 0 && barcodeNaturalSize.height > 0) {
+        const aspect = barcodeNaturalSize.height / barcodeNaturalSize.width
+        let frameW = barcodeRawW
+        let frameH = Math.round(frameW * aspect)
+        if (frameH > barcodeRawH) {
+          const scaleDown = barcodeRawH / frameH
+          frameW = Math.round(frameW * scaleDown)
+          frameH = barcodeRawH
+        }
+        barcodeFrameW = frameW
+        barcodeFrameH = frameH
+      }
+
       // Smart Card Chip Slot (ISO 7816-2 Area)
       const showChip = config?.show_chip !== undefined ? !!config.show_chip : false
       const posChipTop = config?.chip_top !== undefined ? `${config.chip_top}%` : '20%'
@@ -931,35 +1044,53 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 width: barcodeW,
                 height: barcodeH,
                 zIndex: 5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 transform: `rotate(${barcodeRotation}deg)`,
-                transformOrigin: 'center center',
-                filter: 'drop-shadow(0px 0px 4px #ffffff)',
-                // Border + radius live on this wrapper (not the <img>) — html2canvas clips
-                // overflow:hidden + border-radius reliably on plain divs, same as the photo frame.
-                ...(isPoltekUnit
-                  ? { border: '4px solid #ffffff', borderRadius: '6px', boxSizing: 'border-box' as const, overflow: 'hidden' as const }
-                  : { outline: '4px solid #ffffff', boxSizing: 'border-box' as const })
+                transformOrigin: 'center center'
               }}
             >
-              {barcodeUrl ? (
-                <img
-                  src={portraitBarcodeUrl || barcodeUrl}
-                  alt="Barcode"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain'
-                  }}
-                />
-              ) : (
-                <Barcode
-                  value={data.barcode && data.barcode !== 'indexeddb' ? data.barcode : '1234567890'}
-                  width="100%"
-                  height="100%"
-                  color={barcodeColor}
-                />
-              )}
+              {/* Outline hugs the barcode's actual rendered size (barcodeFrameW/H),
+                  not the full configured slot — avoids empty white space when the
+                  barcode's own aspect ratio is shorter than the slot. Square corners,
+                  no glow/shadow — anything rounded or blurred reads as a "cap" bulging
+                  past the bars on a frame this narrow. */}
+              <div
+                style={{
+                  width: `${barcodeFrameW}px`,
+                  height: `${barcodeFrameH}px`,
+                  // flexShrink:0 — without it, the flex-centering parent squeezes this
+                  // box to fit (since content-box border makes it wider than the slot),
+                  // shrinking only the width and breaking the aspect ratio.
+                  flexShrink: 0,
+                  // Border lives on this wrapper (not the <img>) — html2canvas clips
+                  // overflow:hidden reliably on plain divs, same as the photo frame.
+                  ...(isPoltekUnit
+                    ? { border: '3px solid #ffffff', borderRadius: '0px', boxSizing: 'content-box' as const, overflow: 'hidden' as const }
+                    : { outline: '4px solid #ffffff', boxSizing: 'border-box' as const })
+                }}
+              >
+                {barcodeUrl ? (
+                  <img
+                    src={portraitBarcodeUrl || barcodeUrl}
+                    alt="Barcode"
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain'
+                    }}
+                  />
+                ) : (
+                  <Barcode
+                    value={data.barcode && data.barcode !== 'indexeddb' ? data.barcode : '1234567890'}
+                    width="100%"
+                    height="100%"
+                    color={barcodeColor}
+                  />
+                )}
+              </div>
             </div>
           )}
 

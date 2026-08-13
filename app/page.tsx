@@ -40,9 +40,9 @@ export default async function Home() {
       {/* Header */}
       <header className="w-full max-w-6xl mx-auto px-6 py-6 flex justify-between items-center z-10 relative">
         <div className="flex items-center gap-3">
-          <img src="/img/images.png" alt="Logo ATMI" className="h-10 w-auto object-contain" />
+          <img src="/img/final%20logo%20clor.png" alt="Logo Yayasan Karya Bakti Surakarta" className="h-10 w-auto object-contain" />
           <div className="flex flex-col">
-            <span className="text-xs font-black tracking-wider uppercase text-slate-900 leading-none">ATMI SOLO</span>
+            <span className="text-xs font-black tracking-wider uppercase text-slate-900 leading-none">YAYASAN KARYA BAKTI SURAKARTA</span>
             <span className="text-[8px] font-bold tracking-[2px] uppercase text-indigo-600 mt-0.5">Identity Portal</span>
           </div>
         </div>

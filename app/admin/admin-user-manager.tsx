@@ -1544,11 +1544,23 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                 </div>
               </div>
 
-              {/* Role indicator */}
-              <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl text-[10px] text-slate-500 flex items-center gap-2">
-                <User className="w-3.5 h-3.5 text-slate-400" />
-                Role: <span className="font-semibold text-slate-700">Regular User</span>
-                <span className="text-slate-400">(tidak bisa membuat admin baru)</span>
+              {/* Role selector */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider block">
+                  Role
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="flex items-center gap-2 p-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs text-slate-700 cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 has-[:checked]:text-indigo-700 transition">
+                    <input type="radio" name="role" value="user" defaultChecked className="accent-indigo-600 cursor-pointer" />
+                    <User className="w-3.5 h-3.5" />
+                    <span className="font-semibold">User</span>
+                  </label>
+                  <label className="flex items-center gap-2 p-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-xs text-slate-700 cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/50 has-[:checked]:text-indigo-700 transition">
+                    <input type="radio" name="role" value="admin" className="accent-indigo-600 cursor-pointer" />
+                    <Shield className="w-3.5 h-3.5" />
+                    <span className="font-semibold">Admin</span>
+                  </label>
+                </div>
               </div>
 
               {/* Actions */}

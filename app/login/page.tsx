@@ -82,9 +82,9 @@ export default function LoginPage() {
 
       {/* Main Header */}
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-center mb-6 z-10 text-center relative">
-        <img src="/img/images.png" alt="Logo ATMI" className="h-12 w-auto object-contain mb-3" />
+        <img src="/img/final%20logo%20clor.png" alt="Logo Yayasan Karya Bakti Surakarta" className="h-12 w-auto object-contain mb-3" />
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 uppercase">
-          PORTAL IDENTITAS TERPADU
+          YAYASAN KARYA BAKTI SURAKARTA
         </h1>
         <p className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase mt-1">Multi-Company Authentication</p>
       </div>
