@@ -1,8 +1,8 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
-import { getUserAction, signOutAction } from '../auth-actions'
+import { getUserAction } from '../auth-actions'
 import { createAdminClient } from '@/utils/supabase/admin-supabase'
-import { Shield, Users, CreditCard, Building, ShieldAlert, LogOut } from 'lucide-react'
+import { Shield, Users, CreditCard, Building, ShieldAlert } from 'lucide-react'
 import { getUnitsAction } from './admin-actions'
 import AdminUserManager from './admin-user-manager'
 
@@ -31,11 +31,6 @@ export default async function AdminDashboardPage() {
 
   if (user.detail?.role !== 'admin') {
     redirect('/form')
-  }
-
-  const handleSignOut = async () => {
-    'use server'
-    await signOutAction()
   }
 
   // Use admin client to bypass RLS and fetch ALL user details

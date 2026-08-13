@@ -8,10 +8,10 @@ import {
   AlertTriangle, CheckCircle2, Loader2, Mail,
   Lock, User, Users, Building, Search, SlidersHorizontal,
   Upload, FileImage, Folder, Eye, Trash,
-  LayoutDashboard, Shield, Menu, LogOut, ShieldAlert, Move, Cpu,
+  LayoutDashboard, Shield, Menu, ShieldAlert, Move, Cpu,
   CreditCard, ChevronDown
 } from 'lucide-react'
-import { signOutAction } from '../auth-actions'
+import SignOutButton from '../../components/SignOutButton'
 import {
   createUserAction, updateUserAction, deleteUserAction,
   createUnitAction, updateUnitAction, deleteUnitAction
@@ -994,16 +994,10 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
             </div>
           </div>
 
-          <button
-            onClick={async () => {
-              await signOutAction()
-              router.refresh()
-            }}
-            className="w-full px-3 py-2 border border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-800/40 text-slate-400 hover:text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </button>
+          <SignOutButton
+            className="w-full px-3 py-2 border border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-800/40 text-slate-400 hover:text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            label="Sign Out"
+          />
         </div>
       </aside>
 

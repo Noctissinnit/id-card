@@ -1,12 +1,13 @@
 import React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getUserAction, signOutAction } from '../../auth-actions'
+import { getUserAction } from '../../auth-actions'
 import { getSession, clearSessionAction } from '../../actions'
 import { getUnitsAction } from '../admin-actions'
 import IDCardForm from '../../id-card-form'
 import IDCardPreview from '../../id-card-preview'
-import { ArrowLeft, Building, LogOut, ShieldAlert } from 'lucide-react'
+import SignOutButton from '../../../components/SignOutButton'
+import { ArrowLeft, Building, ShieldAlert } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,11 +48,6 @@ export default async function AdminCreateCardPage({
     session = null
   }
 
-  const handleSignOut = async () => {
-    'use server'
-    await signOutAction()
-  }
-
   return (
     <main className="min-h-screen w-full flex flex-col justify-between bg-slate-50 text-slate-900 relative overflow-hidden bg-grid-pattern py-10 px-4 md:px-8">
       {/* Background radial glows */}
@@ -84,15 +80,7 @@ export default async function AdminCreateCardPage({
               <ArrowLeft className="w-3.5 h-3.5" />
               Kembali ke Admin
             </Link>
-            <form action={handleSignOut}>
-              <button
-                type="submit"
-                className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-2 shadow-sm"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
-            </form>
+            <SignOutButton className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-2 shadow-sm disabled:opacity-50" />
           </div>
         </header>
 

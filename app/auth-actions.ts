@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin-supabase'
 import { revalidatePath } from 'next/cache'
+import { cookies } from 'next/headers'
 
 export async function signUpAction(formData: FormData) {
   const email = formData.get('email') as string
@@ -100,6 +101,11 @@ export async function signOutAction() {
   if (error) {
     return { error: error.message }
   }
+
+  // Clear any in-progress ID card session so it doesn't leak into the next
+  // person who signs in on this browser (e.g. a shared/kiosk machine).
+  const cookieStore = await cookies()
+  cookieStore.delete('id_card_session')
 
   revalidatePath('/', 'layout')
   return { success: true }
