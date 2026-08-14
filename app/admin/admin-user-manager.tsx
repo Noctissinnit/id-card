@@ -9,7 +9,7 @@ import {
   Lock, User, Users, Building, Search, SlidersHorizontal,
   Upload, FileImage, Folder, Eye, Trash,
   LayoutDashboard, Shield, Menu, ShieldAlert, Move, Cpu,
-  CreditCard, ChevronDown
+  CreditCard, ChevronDown, Scissors
 } from 'lucide-react'
 import SignOutButton from '../../components/SignOutButton'
 import {
@@ -123,6 +123,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     photo_width: string;
     photo_height: string;
     photo_shape: string;
+    photo_crop_zoom?: string;
     text_color: string;
     jabatan_color: string;
     nik_color: string;
@@ -173,6 +174,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     photo_width: '150',
     photo_height: '200',
     photo_shape: 'rectangle',
+    photo_crop_zoom: '1',
     text_color: '#ffffff',
     jabatan_color: '#facc15',
     nik_color: '#ffffff',
@@ -242,6 +244,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         photo_width: config?.photo_width || '150',
         photo_height: config?.photo_height || '200',
         photo_shape: config?.photo_shape || 'rectangle',
+        photo_crop_zoom: config?.photo_crop_zoom || '1',
         text_color: config?.text_color ? config.text_color : '#ffffff',
         jabatan_color: config?.jabatan_color ? config.jabatan_color : '#facc15',
         nik_color: config?.nik_color ? config.nik_color : '#ffffff',
@@ -294,6 +297,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         photo_width: '150',
         photo_height: '200',
         photo_shape: 'rectangle',
+        photo_crop_zoom: '1',
         text_color: '#ffffff',
         jabatan_color: '#facc15',
         nik_color: '#ffffff',
@@ -573,6 +577,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         photo_width: '210',
         photo_height: '270',
         photo_shape: 'rectangle',
+        photo_crop_zoom: '1',
         text_color: '#1b365d',
         jabatan_color: '#155afa',
         nik_color: '#334155',
@@ -625,6 +630,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         photo_width: '150',
         photo_height: '200',
         photo_shape: 'rectangle',
+        photo_crop_zoom: '2.4',
         text_color: '#ffffff',
         jabatan_color: '#facc15',
         nik_color: '#ffffff',
@@ -2325,6 +2331,9 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             const shape = e.target.value;
                             setModalLayout(prev => {
                               const updates: any = { ...prev, photo_shape: shape };
+                              // Give circle/square a sensible equal-sides starting point when switching
+                              // shape — width & height stay independently adjustable afterward (circle
+                              // can be dragged into an oval; square's control keeps them synced).
                               if (shape === 'square' || shape === 'circle') {
                                 updates.photo_height = prev.photo_width;
                               }
@@ -2338,7 +2347,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         </select>
                       </div>
 
-                      {modalLayout.photo_shape === 'rectangle' ? (
+                      {modalLayout.photo_shape === 'rectangle' || modalLayout.photo_shape === 'circle' ? (
                         <>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
@@ -2376,6 +2385,20 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
                       )}
+
+                      {/* Default crop zoom for the user-facing photo cropper */}
+                      <div className="col-span-2 space-y-1.5 pt-3 mt-1 border-t border-slate-200/70">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase flex items-center gap-1.5">
+                          <Scissors className="w-3 h-3 text-indigo-500" />
+                          Zoom Default Crop Foto ({Number(modalLayout.photo_crop_zoom || '1').toFixed(1)}x)
+                        </label>
+                        <input type="range" min="1" max="4" step="0.1" value={modalLayout.photo_crop_zoom || '1'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_crop_zoom: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        <p className="text-[9px] text-slate-400 leading-normal">
+                          Seberapa dekat foto otomatis ter-zoom saat user pertama kali membuka kotak crop pas foto (sebelum digeser). User hanya bisa menggeser posisi, tidak bisa mengubah zoom-nya sendiri — jadi pastikan nilainya pas untuk gaya foto unit ini.
+                        </p>
+                      </div>
                     </>
                   )}
 
@@ -3407,7 +3430,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                         </select>
                       </div>
 
-                      {modalLayout.photo_shape === 'rectangle' ? (
+                      {modalLayout.photo_shape === 'rectangle' || modalLayout.photo_shape === 'circle' ? (
                         <>
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
@@ -3445,6 +3468,20 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
                         </div>
                       )}
+
+                      {/* Default crop zoom for the user-facing photo cropper */}
+                      <div className="col-span-2 space-y-1.5 pt-3 mt-1 border-t border-slate-200/70">
+                        <label className="text-[9px] font-bold text-slate-600 uppercase flex items-center gap-1.5">
+                          <Scissors className="w-3 h-3 text-indigo-500" />
+                          Zoom Default Crop Foto ({Number(modalLayout.photo_crop_zoom || '1').toFixed(1)}x)
+                        </label>
+                        <input type="range" min="1" max="4" step="0.1" value={modalLayout.photo_crop_zoom || '1'}
+                          onChange={e => setModalLayout(prev => ({ ...prev, photo_crop_zoom: e.target.value }))}
+                          className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                        <p className="text-[9px] text-slate-400 leading-normal">
+                          Seberapa dekat foto otomatis ter-zoom saat user pertama kali membuka kotak crop pas foto (sebelum digeser). User hanya bisa menggeser posisi, tidak bisa mengubah zoom-nya sendiri — jadi pastikan nilainya pas untuk gaya foto unit ini.
+                        </p>
+                      </div>
                     </>
                   )}
 

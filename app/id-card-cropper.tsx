@@ -26,6 +26,7 @@ interface Area {
 interface IDCardCropperProps {
   imageSrc: string;
   defaultBgColor?: string;
+  defaultZoom?: number;
   onCropComplete: (croppedImageBase64: string) => void;
   onCancel: () => void;
 }
@@ -105,10 +106,9 @@ const applyBackgroundColor = (base64Image: string, color: string): Promise<strin
     img.src = base64Image;
   });
 
-// Photo scale is fixed — the user can only reposition (drag) the photo, not zoom it.
-const FIXED_ZOOM = 1;
-
-export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', onCropComplete, onCancel }: IDCardCropperProps) {
+export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', defaultZoom = 1, onCropComplete, onCancel }: IDCardCropperProps) {
+  // Photo scale is fixed — the user can only reposition (drag) the photo, not zoom it.
+  const FIXED_ZOOM = defaultZoom;
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [removeBg, setRemoveBg] = useState(false);

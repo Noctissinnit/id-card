@@ -120,7 +120,17 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // Admins can tune the cropper's default zoom per unit (Edit Unit → "Zoom Default
+  // Crop Foto"). If a unit hasn't set one explicitly, fall back to a sensible guess:
+  // units without their own uploaded template (e.g. Yayasan Karya Bakti Surakarta) use
+  // the built-in circular-photo "karya-bakti" theme, whose default submitted photos are
+  // typically a wider standing shot, so the cropper starts pre-zoomed in to roughly
+  // frame face + shoulders instead of showing the whole body by default.
+  const usesDefaultCircleTheme = !customTemplate?.card_design;
+  const configuredCropZoom = Number(customTemplate?.layout_config?.photo_crop_zoom);
+  const cropperDefaultZoom = configuredCropZoom > 0 ? configuredCropZoom : (usesDefaultCircleTheme ? 2.4 : 1);
+
   // Fields state
   const [nama, setNama] = useState('');
   const [nik, setNik] = useState('');
@@ -580,6 +590,7 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
         <IDCardCropper
           imageSrc={rawImageSrc}
           defaultBgColor={customTemplate?.layout_config?.photo_bg_color || '#1b365d'}
+          defaultZoom={cropperDefaultZoom}
           onCropComplete={(croppedBase64) => {
             setPhotoBase64(croppedBase64);
             setPhotoPreview(croppedBase64);

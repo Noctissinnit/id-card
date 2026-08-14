@@ -1190,8 +1190,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 top: '17%',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                width: '78.5%',
-                height: '51.4%',
+                // Fixed, equal px (not matching % of width vs height) so this is
+                // always a true circle regardless of the card's own aspect ratio.
+                width: '259px',
+                height: '259px',
                 borderRadius: '50%',
                 overflow: 'hidden',
                 border: '4px solid white',
