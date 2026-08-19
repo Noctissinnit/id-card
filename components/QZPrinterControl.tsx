@@ -248,7 +248,14 @@ export default function QZPrinterControl({
 
     // Capture exact card node directly with onclone hook enforcing 330px x 515px relative container bounds
     const cardNode = (element.querySelector('.id-card-render') as HTMLElement | null) || element;
-    
+
+    // Wait for web fonts (e.g. a custom Poppins weight) to finish loading before
+    // rasterizing — otherwise the captured image can fall back to a default font
+    // even though the on-screen card already looks correct.
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
     const canvas = await html2canvas(cardNode, {
       scale: 3.175,
       useCORS: true,

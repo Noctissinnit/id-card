@@ -364,6 +364,7 @@ export async function createUnitAction(formData: FormData) {
     }
 
     revalidatePath('/admin')
+    revalidatePath('/admin/create-card')
     revalidatePath('/form')
     revalidatePath('/')
     return { success: true, unit: data?.[0] }
@@ -440,6 +441,7 @@ export async function updateUnitAction(formData: FormData) {
     }
 
     revalidatePath('/admin')
+    revalidatePath('/admin/create-card')
     revalidatePath('/form')
     revalidatePath('/')
     return { success: true, unit: data?.[0] }
@@ -483,6 +485,7 @@ export async function deleteUnitAction(unitId: number) {
     }
 
     revalidatePath('/admin')
+    revalidatePath('/admin/create-card')
     revalidatePath('/form')
     revalidatePath('/')
     return { success: true }

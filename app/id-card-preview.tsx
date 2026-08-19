@@ -18,7 +18,9 @@ import {
   Layers,
   ArrowRightLeft,
   User,
-  Printer
+  Printer,
+  Zap,
+  MousePointerClick
 } from 'lucide-react';
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
@@ -520,7 +522,14 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   };
   const captureCardCanvasToDataURL = async (sourceElement: HTMLElement): Promise<string> => {
     const cardRender = (sourceElement.querySelector('.id-card-render') as HTMLElement | null) || sourceElement;
-    
+
+    // Make sure custom web fonts (e.g. a newly-used Poppins weight) have actually
+    // finished downloading before rasterizing — otherwise html2canvas can capture
+    // a frame that fell back to a default font even though it looks right live.
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
     // Capture the exact card node on screen with onclone hook enforcing 330px x 515px relative container bounds
     const canvas = await html2canvas(cardRender, {
       scale: 3.175,
@@ -653,6 +662,11 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
   const triggerDownload = async (element: HTMLDivElement, filename: string) => {
     try {
+      // Wait for web fonts to finish loading before rasterizing (see captureCardCanvasToDataURL).
+      if (typeof document !== 'undefined' && document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
       // Temporarily remove hidden offscreen elements if needed, though they are in DOM
       // Calibrated to 300 DPI resolution for HID Fargo DTC1250e thermal ribbon ID card printers
       const canvas = await html2canvas(element, {
@@ -1679,13 +1693,18 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               <span className="text-[10px] tracking-[2px] uppercase font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">ID Card Studio</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 pt-1">Kelola & Unduh Kartu</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">Pilih format unduhan ID Card Anda dengan resolusi cetak tinggi.</p>
+            <p className="text-xs text-slate-500 leading-relaxed">Ada 3 cara pakai kartu ini — unduh gambarnya, cetak lewat dialog printer biasa, atau cetak langsung ke printer kartu tanpa dialog.</p>
           </div>
 
           <div className="h-[1px] bg-slate-100" />
 
           {/* Action Download Buttons */}
           <div className="space-y-2.5">
+            <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[9px] font-bold">1</span>
+              Unduh Gambar Kartu
+              <span className="normal-case font-normal text-slate-400">(opsional, tidak mencetak apa pun)</span>
+            </label>
             <button
               onClick={() => handleDownload('front')}
               disabled={downloading}
@@ -1729,41 +1748,45 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
           <div className="h-[1px] bg-slate-100" />
 
-          {/* Direct Print Section */}
+          {/* Browser print-dialog section */}
           <div className="space-y-2.5">
             <div className="flex justify-between items-center">
               <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
-                <Printer className="w-3.5 h-3.5 text-indigo-600" />
-                Cetak Langsung (Fargo DTC1250e)
+                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[9px] font-bold">2A</span>
+                <MousePointerClick className="w-3.5 h-3.5 text-indigo-600" />
+                Cetak via Dialog Printer
               </label>
-              <span className="text-[9px] bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Direct Connect
+              <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Printer Apa Saja
               </span>
             </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed -mt-1">
+              Membuka jendela cetak bawaan browser — Anda pilih sendiri printer mana yang dipakai. Cocok untuk printer biasa (bukan khusus kartu ID).
+            </p>
             <div className="grid grid-cols-3 gap-2">
-              <button 
+              <button
                 onClick={() => triggerPrint('front')}
                 disabled={downloading}
                 className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
-                title="Cetak langsung Sisi Depan ke Printer Fargo DTC1250e"
+                title="Buka dialog cetak browser untuk Sisi Depan"
               >
                 <Printer className="w-3.5 h-3.5 text-indigo-600" />
                 Sisi Depan
               </button>
-              <button 
+              <button
                 onClick={() => triggerPrint('back')}
                 disabled={downloading}
                 className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
-                title="Cetak langsung Sisi Belakang ke Printer Fargo DTC1250e"
+                title="Buka dialog cetak browser untuk Sisi Belakang"
               >
                 <Printer className="w-3.5 h-3.5 text-purple-600" />
                 Sisi Belakang
               </button>
-              <button 
+              <button
                 onClick={() => triggerPrint('both')}
                 disabled={downloading}
-                className="flex flex-col items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-xs transition disabled:opacity-50"
-                title="Cetak langsung Kedua Sisi ke Printer Fargo DTC1250e"
+                className="flex flex-col items-center justify-center gap-1 bg-slate-700 hover:bg-slate-800 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Buka dialog cetak browser untuk Kedua Sisi"
               >
                 <Printer className="w-3.5 h-3.5 text-white" />
                 Kedua Sisi
@@ -1771,7 +1794,19 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             </div>
           </div>
 
+          <div className="h-[1px] bg-slate-100" />
+
           {/* QZ Tray Integration Panel */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-bold">2B</span>
+              <Zap className="w-3.5 h-3.5 text-emerald-600" />
+              Cetak Langsung ke Printer Kartu (Fargo)
+            </label>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Tanpa dialog, langsung ke printer Fargo DTC1250e. Butuh aplikasi QZ Tray terpasang & terhubung di komputer ini dulu.
+            </p>
+          </div>
           <QZPrinterControl cardElementId="visible-front-card" cardBackElementId="export-back-card" />
 
           {/* Reset / Create New Button */}

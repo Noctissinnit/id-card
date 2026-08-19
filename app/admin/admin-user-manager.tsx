@@ -145,10 +145,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     chip_height: string;
     jabatan_size?: string;
     jabatan_weight?: string;
+    jabatan_font?: string;
     nik_size?: string;
     nik_weight?: string;
+    nik_font?: string;
     nama_size?: string;
     nama_weight?: string;
+    nama_font?: string;
     barcode_top: string;
     barcode_left: string;
     barcode_width: string;
@@ -196,10 +199,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     chip_height: '44',
     jabatan_size: '11',
     jabatan_weight: '900',
+    jabatan_font: '',
     nik_size: '10',
     nik_weight: '400',
+    nik_font: '',
     nama_size: '13',
     nama_weight: '700',
+    nama_font: '',
     barcode_top: '10',
     barcode_left: '75',
     barcode_width: '60',
@@ -266,10 +272,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         chip_height: config?.chip_height || '44',
         jabatan_size: config?.jabatan_size || '11',
         jabatan_weight: config?.jabatan_weight || '900',
+        jabatan_font: config?.jabatan_font || '',
         nik_size: config?.nik_size || '10',
         nik_weight: config?.nik_weight || '400',
+        nik_font: config?.nik_font || '',
         nama_size: config?.nama_size || '13',
         nama_weight: config?.nama_weight || '700',
+        nama_font: config?.nama_font || '',
         barcode_top: config?.barcode_top || '10',
         barcode_left: config?.barcode_left || '75',
         barcode_width: config?.barcode_width || '60',
@@ -319,10 +328,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         chip_height: '44',
         jabatan_size: '11',
         jabatan_weight: '900',
+        jabatan_font: '',
         nik_size: '10',
         nik_weight: '400',
+        nik_font: '',
         nama_size: '13',
         nama_weight: '700',
+        nama_font: '',
         barcode_top: '10',
         barcode_left: '75',
         barcode_width: '60',
@@ -564,6 +576,10 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
 
   // Quick Preset Layout Applicator
   const applyPreset = (preset: 'atmi' | 'karya-bakti') => {
+    const confirmed = window.confirm(
+      'Menerapkan preset ini akan MERESET semua pengaturan tata letak & font (posisi, warna, ukuran, ketebalan, jenis font) ke nilai bawaan preset — termasuk kustomisasi yang sudah Anda atur manual sebelumnya.\n\nLanjutkan?'
+    )
+    if (!confirmed) return
     if (preset === 'atmi') {
       setModalLayout({
         jabatan_top: '26.5',
@@ -599,10 +615,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         chip_height: '44',
         jabatan_size: '11',
         jabatan_weight: '900',
+        jabatan_font: '',
         nik_size: '12',
         nik_weight: '400',
+        nik_font: '',
         nama_size: '14',
         nama_weight: '700',
+        nama_font: '',
         barcode_top: '25',
         barcode_left: '51',
         barcode_width: '45',
@@ -652,10 +671,13 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
         chip_height: '44',
         jabatan_size: '11',
         jabatan_weight: '900',
+        jabatan_font: '',
         nik_size: '10',
         nik_weight: '400',
+        nik_font: '',
         nama_size: '13',
         nama_weight: '700',
+        nama_font: '',
         barcode_top: '10',
         barcode_left: '75',
         barcode_width: '60',
@@ -2690,6 +2712,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="900">Black (900)</option>
                           </select>
                         </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Jenis Font</label>
+                          <select value={modalLayout.jabatan_font || ''}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_font: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="">Default (Century Gothic)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Lato', sans-serif">Lato</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* NIK Font Config */}
@@ -2715,6 +2747,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="900">Black (900)</option>
                           </select>
                         </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Jenis Font</label>
+                          <select value={modalLayout.nik_font || ''}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_font: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="">Default (Century Gothic)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Lato', sans-serif">Lato</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* Nama Font Config */}
@@ -2738,6 +2780,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="700">Bold (700)</option>
                             <option value="800">Extra Bold (800)</option>
                             <option value="900">Black (900)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Jenis Font</label>
+                          <select value={modalLayout.nama_font || ''}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_font: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="">Default (Century Gothic)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Lato', sans-serif">Lato</option>
                           </select>
                         </div>
                       </div>
@@ -3773,6 +3825,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="900">Black (900)</option>
                           </select>
                         </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Jenis Font</label>
+                          <select value={modalLayout.jabatan_font || ''}
+                            onChange={e => setModalLayout(prev => ({ ...prev, jabatan_font: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="">Default (Century Gothic)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Lato', sans-serif">Lato</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* NIK Font Config */}
@@ -3798,6 +3860,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="900">Black (900)</option>
                           </select>
                         </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Jenis Font</label>
+                          <select value={modalLayout.nik_font || ''}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nik_font: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="">Default (Century Gothic)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Lato', sans-serif">Lato</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* Nama Font Config */}
@@ -3821,6 +3893,16 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="700">Bold (700)</option>
                             <option value="800">Extra Bold (800)</option>
                             <option value="900">Black (900)</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] text-slate-500 font-medium block">Jenis Font</label>
+                          <select value={modalLayout.nama_font || ''}
+                            onChange={e => setModalLayout(prev => ({ ...prev, nama_font: e.target.value }))}
+                            className="w-full px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium outline-none cursor-pointer focus:bg-white focus:border-indigo-500 transition">
+                            <option value="">Default (Century Gothic)</option>
+                            <option value="'Poppins', sans-serif">Poppins</option>
+                            <option value="'Lato', sans-serif">Lato</option>
                           </select>
                         </div>
                       </div>
