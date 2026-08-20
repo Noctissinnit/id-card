@@ -22,13 +22,14 @@ export async function getQZ(): Promise<typeof import('qz-tray')> {
 
 /**
  * Configures security certificates and signing algorithm for QZ Tray.
- * Development: Uses self-signed override / prompt mode.
- * Production: Fetches digital signature from Next.js API route.
+ * Default: uses QZ Tray's built-in "unsigned" prompt-authorization mode (the user
+ * clicks Allow once in the QZ Tray app) — this needs no certificate setup at all.
+ * Signed/silent mode (no prompt) requires a real QZ Tray certificate + private key;
+ * set NEXT_PUBLIC_QZ_SIGNED_MODE=true once /api/qz/cert and QZ_PRIVATE_KEY are
+ * properly configured to switch this app over to that flow.
  */
 function configureSecurity(qz: typeof import('qz-tray')) {
-  // In development mode: bypass security promise registration so QZ Tray runs
-  // in default prompt-authorization mode, preventing noisy 404 PEM fetch errors in console.
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NEXT_PUBLIC_QZ_SIGNED_MODE !== 'true') {
     return;
   }
 
