@@ -643,6 +643,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         </html>
       `);
       printWin.document.close();
+
+      // Card has been sent to the print dialog — clear the session so the next
+      // visit starts from a blank form instead of re-showing this same card.
+      await handleReset();
     } catch (err) {
       console.error('Print error:', err);
       printWin.close();
@@ -1807,7 +1811,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               Tanpa dialog, langsung ke printer Fargo DTC1250e. Butuh aplikasi QZ Tray terpasang & terhubung di komputer ini dulu.
             </p>
           </div>
-          <QZPrinterControl cardElementId="visible-front-card" cardBackElementId="export-back-card" />
+          <QZPrinterControl cardElementId="visible-front-card" cardBackElementId="export-back-card" onPrintSuccess={handleReset} />
 
           {/* Reset / Create New Button */}
           <button
