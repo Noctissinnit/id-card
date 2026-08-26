@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { signInAction, getUserAction } from '../auth-actions'
+import { deletePhoto } from '../db'
 import { Lock, User, CreditCard, ShieldAlert, AlertCircle, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
@@ -47,6 +48,17 @@ export default function LoginPage() {
       setError(result.error)
       setLoading(false)
     } else {
+      // Clear any leftover ID card session data (photo/barcode blobs live in this
+      // browser's IndexedDB, which the server can't touch) so a fresh login never
+      // inherits whatever the previous person on this device was working on —
+      // whether they signed out manually or their session expired automatically.
+      try {
+        await deletePhoto('id_card_photo')
+        await deletePhoto('id_card_barcode')
+      } catch {
+        // best-effort — don't block login on IndexedDB issues
+      }
+
       // Get role of logged in user to redirect correctly
       const { user } = await getUserAction()
       if (user) {

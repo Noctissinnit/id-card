@@ -90,6 +90,17 @@ export async function signInAction(formData: FormData) {
     return { error: error.message }
   }
 
+  // Start the 2-hour absolute session clock (enforced in utils/supabase/middleware.ts,
+  // independent of Supabase's own refresh-token auto-renewal).
+  const cookieStore = await cookies()
+  cookieStore.set('login_at', String(Date.now()), {
+    path: '/',
+    maxAge: 60 * 60 * 2, // 2 hours, matches the enforced cap
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+  })
+
   revalidatePath('/', 'layout')
   return { success: true, user: data.user }
 }
@@ -106,6 +117,7 @@ export async function signOutAction() {
   // person who signs in on this browser (e.g. a shared/kiosk machine).
   const cookieStore = await cookies()
   cookieStore.delete('id_card_session')
+  cookieStore.delete('login_at')
 
   revalidatePath('/', 'layout')
   return { success: true }
