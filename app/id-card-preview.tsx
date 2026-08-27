@@ -467,7 +467,6 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [barcodeUrl, setBarcodeUrl] = useState<string>('');
   const [portraitBarcodeUrl, setPortraitBarcodeUrl] = useState<string>('');
-  const [barcodeNaturalSize, setBarcodeNaturalSize] = useState<{ width: number; height: number } | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase();
@@ -500,14 +499,12 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
   useEffect(() => {
     if (!barcodeUrl) {
       setPortraitBarcodeUrl('');
-      setBarcodeNaturalSize(null);
       return;
     }
     let cancelled = false;
     rotateImageToPortrait(barcodeUrl).then((result) => {
       if (cancelled) return;
       setPortraitBarcodeUrl(result.url);
-      setBarcodeNaturalSize(result.width && result.height ? { width: result.width, height: result.height } : null);
     });
     return () => {
       cancelled = true;
@@ -760,10 +757,19 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const EDITOR_CARD_WIDTH = 250
       const SCALE = PREVIEW_CARD_WIDTH / EDITOR_CARD_WIDTH
 
+      // Poltek-only: name wraps to a 2nd line once it's more than 2 words (see nama
+      // rendering below). Computed up-front so NIK's position can make room for it.
+      const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
+      const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
+      const namaWordCount = (data.nama || '').trim().split(/\s+/).filter(Boolean).length
+      const namaShouldWrap = isPoltekUnit && namaWordCount > 2
+      const NIK_WRAP_OFFSET_PCT = 2.5 // extra top offset (% of card height) so NIK clears the wrapped 2nd Nama line
+
       // Positions & Dimensions mapping with defaults (percentages scale naturally)
       const posJabatan = config?.jabatan_top !== undefined ? `${config.jabatan_top}%` : '26.5%'
       const posJabatanLeft = config?.jabatan_left !== undefined ? `${config.jabatan_left}%` : '5%'
-      const posNik = config?.nik_top !== undefined ? `${config.nik_top}%` : '35%'
+      const nikTopBase = config?.nik_top !== undefined ? Number(config.nik_top) : 35
+      const posNik = `${nikTopBase + (namaShouldWrap ? NIK_WRAP_OFFSET_PCT : 0)}%`
       const posNikLeft = (config?.nik_left !== undefined && String(config.nik_left) !== '0') ? `${config.nik_left}%` : '5%'
       const posNama = config?.nama_top !== undefined ? `${config.nama_top}%` : '86%'
       const posNamaLeft = config?.nama_left !== undefined ? `${config.nama_left}%` : '5%'
@@ -796,28 +802,13 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const barcodeRotation = config?.barcode_rotation !== undefined ? Number(config.barcode_rotation) : 0
       const barcodeColor = config?.barcode_color ? config.barcode_color : '#000000'
 
-      // When the uploaded barcode photo's own aspect ratio doesn't match the
-      // configured slot, size the frame to the barcode's actual rendered size
-      // instead of the full slot, so the outline hugs the barcode instead of
-      // leaving empty white space. Always fill the configured WIDTH first (the
-      // barcode's visual "thickness" stays consistent with what the admin set)
-      // and derive the height from the barcode's true aspect ratio — only
-      // falling back to shrinking the width too if that height would overflow
-      // the configured slot.
-      let barcodeFrameW = barcodeRawW
-      let barcodeFrameH = barcodeRawH
-      if (barcodeUrl && barcodeNaturalSize && barcodeNaturalSize.width > 0 && barcodeNaturalSize.height > 0) {
-        const aspect = barcodeNaturalSize.height / barcodeNaturalSize.width
-        let frameW = barcodeRawW
-        let frameH = Math.round(frameW * aspect)
-        if (frameH > barcodeRawH) {
-          const scaleDown = barcodeRawH / frameH
-          frameW = Math.round(frameW * scaleDown)
-          frameH = barcodeRawH
-        }
-        barcodeFrameW = frameW
-        barcodeFrameH = frameH
-      }
+      // Barcode always renders at the admin-configured fixed size (barcodeRawW x
+      // barcodeRawH), regardless of the uploaded photo's own aspect ratio — keeps
+      // every card's barcode the same size. The image itself stretches to fill
+      // (see objectFit:'fill' below); rotation + whitespace-trim still run first
+      // so what gets stretched is the clean barcode content, not raw photo margin.
+      const barcodeFrameW = barcodeRawW
+      const barcodeFrameH = barcodeRawH
 
       // Smart Card Chip Slot (ISO 7816-2 Area)
       const showChip = config?.show_chip !== undefined ? !!config.show_chip : false
@@ -829,8 +820,6 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const chipH = `${chipRawH}px`
 
       // Footer Logo (Politeknik ATMI & Flazz) positioning - only for Poltek/Politeknik units
-      const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
-      const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
       const showFooterLogo = isPoltekUnit ? (config?.show_footer_logo !== undefined ? !!config.show_footer_logo : true) : false
       const posFooterLogoTop = config?.footer_logo_top !== undefined ? `${config.footer_logo_top}%` : '77%'
       const posFooterLogoLeft = config?.footer_logo_left !== undefined ? `${config.footer_logo_left}%` : '0%'
@@ -856,8 +845,8 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const namaFontFamily = config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif"
       const namaBaseFontPx = Math.round(Number(config?.nama_size || 13) * SCALE)
       const namaText = data.nama || (isExport ? '' : 'IKA')
-      // Poltek renders the name on one line, so shrink it to fit rather than wrapping/cutting it off.
-      const namaFontPx = isPoltekUnit
+      // namaShouldWrap (>2 words) computed earlier alongside posNik's offset.
+      const namaFontPx = (isPoltekUnit && !namaShouldWrap)
         ? fitSingleLineFontSize(namaText, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, Math.max(9, Math.round(namaBaseFontPx * 0.5)))
         : namaBaseFontPx
 
@@ -1012,7 +1001,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             >
               <span
                 style={
-                  isPoltekUnit
+                  isPoltekUnit && !namaShouldWrap
                     ? {
                         fontFamily: namaFontFamily,
                         fontWeight: config?.nama_weight || '700',
@@ -1026,6 +1015,24 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
+                      }
+                    : isPoltekUnit
+                    ? {
+                        fontFamily: namaFontFamily,
+                        fontWeight: config?.nama_weight || '700',
+                        fontSize: `${namaFontPx}px`,
+                        color: namaColor,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        lineHeight: '0.85',
+                        textAlign: config?.nama_align || 'center',
+                        width: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        whiteSpace: 'pre-line'
                       }
                     : {
                         fontFamily: config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
@@ -1046,7 +1053,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 }
               >
                 {isPoltekUnit
-                  ? namaText
+                  ? (namaShouldWrap ? formatNameLines(namaText, 2) : namaText)
                   : (data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA')))}
               </span>
             </div>
@@ -1097,7 +1104,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                       display: 'block',
                       width: '100%',
                       height: '100%',
-                      objectFit: 'contain'
+                      objectFit: 'fill'
                     }}
                   />
                 ) : (
