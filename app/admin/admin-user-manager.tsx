@@ -90,6 +90,10 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
 
   // Unit Modal states
   const [showCreateUnit, setShowCreateUnit] = useState(false)
+  // Collapses the position/size/color/font fine-tuning controls behind one toggle
+  // so the modal isn't a huge wall of sliders by default — same fields, just hidden
+  // until the admin actually wants to fine-tune something.
+  const [advancedConfigOpen, setAdvancedConfigOpen] = useState(false)
   const [editUnit, setEditUnit] = useState<Unit | null>(null)
   const [deleteUnitTarget, setDeleteUnitTarget] = useState<Unit | null>(null)
 
@@ -2258,6 +2262,19 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                   </div>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => setAdvancedConfigOpen(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-white hover:bg-indigo-50/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    Pengaturan Lanjutan (Posisi, Ukuran, Warna, Font, dll)
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${advancedConfigOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {advancedConfigOpen && (
                 <div className="grid grid-cols-2 gap-3.5">
                   {/* Jabatan Y & X */}
                   {modalLayout.show_jabatan && (
@@ -2429,6 +2446,17 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     <>
                       <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5">
                         <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider block mb-2">🏷️ Konfigurasi Logo ATMI & Flazz</span>
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <label className="flex items-center gap-2 cursor-pointer text-[10px] font-semibold text-slate-700">
+                          <input type="checkbox" checked={modalLayout.footer_logo_url !== '/img/atmidanflazzbg.png'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_url: e.target.checked ? '/img/atmidanflazz.png' : '/img/atmidanflazzbg.png' }))}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                          Gunakan Logo ATMI & Flazz
+                        </label>
+                        <p className="text-[9px] text-slate-400 leading-normal">
+                          Nyala: pakai <code className="font-mono">atmidanflazz.png</code> (logo lengkap). Mati: pakai <code className="font-mono">atmidanflazzbg.png</code> (versi untuk latar berwarna).
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Logo Y ({modalLayout.footer_logo_top}%)</label>
@@ -2796,6 +2824,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     </div>
                   </div>
                 </div>
+                )}
 
                 <input type="hidden" name="layout_config" value={JSON.stringify(modalLayout)} />
               </div>
@@ -3374,6 +3403,19 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                   </div>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => setAdvancedConfigOpen(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-white hover:bg-indigo-50/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    Pengaturan Lanjutan (Posisi, Ukuran, Warna, Font, dll)
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${advancedConfigOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {advancedConfigOpen && (
                 <div className="grid grid-cols-2 gap-3.5">
                   {/* Jabatan Y & X */}
                   {modalLayout.show_jabatan && (
@@ -3542,6 +3584,17 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     <>
                       <div className="col-span-2 border-t border-slate-200 pt-3 mt-1.5">
                         <span className="text-[9px] font-bold text-slate-700 uppercase tracking-wider block mb-2">🏷️ Konfigurasi Logo ATMI & Flazz</span>
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <label className="flex items-center gap-2 cursor-pointer text-[10px] font-semibold text-slate-700">
+                          <input type="checkbox" checked={modalLayout.footer_logo_url !== '/img/atmidanflazzbg.png'}
+                            onChange={e => setModalLayout(prev => ({ ...prev, footer_logo_url: e.target.checked ? '/img/atmidanflazz.png' : '/img/atmidanflazzbg.png' }))}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                          Gunakan Logo ATMI & Flazz
+                        </label>
+                        <p className="text-[9px] text-slate-400 leading-normal">
+                          Nyala: pakai <code className="font-mono">atmidanflazz.png</code> (logo lengkap). Mati: pakai <code className="font-mono">atmidanflazzbg.png</code> (versi untuk latar berwarna).
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-600 uppercase block">Logo Y ({modalLayout.footer_logo_top}%)</label>
@@ -3909,6 +3962,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                     </div>
                   </div>
                 </div>
+                )}
 
                 <input type="hidden" name="layout_config" value={JSON.stringify(modalLayout)} />
               </div>
