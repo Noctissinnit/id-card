@@ -3,14 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import html2canvas from 'html2canvas-pro';
-import { 
-  Download, 
-  RefreshCw, 
-  ShieldCheck, 
-  Building, 
-  Briefcase, 
-  Mail, 
-  Phone, 
+import {
+  RefreshCw,
+  ShieldCheck,
+  Building,
+  Briefcase,
+  Mail,
+  Phone,
   Globe,
   Share2,
   CheckCircle2,
@@ -18,9 +17,7 @@ import {
   Layers,
   ArrowRightLeft,
   User,
-  Printer,
-  Zap,
-  MousePointerClick
+  Zap
 } from 'lucide-react';
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
@@ -68,6 +65,59 @@ function fitSingleLineFontSize(
     fontPx -= 0.5;
   }
   return fontPx;
+}
+
+// Largest font size (down to minFontPx) at which every one of `lines` individually
+// fits within maxWidthPx — used so a wrapped 2-line name doesn't get re-wrapped by
+// the browser (each intended line must fit on its own single visual line).
+function fitMultiLineFontSize(
+  lines: string[],
+  maxWidthPx: number,
+  baseFontPx: number,
+  fontWeight: string | number,
+  fontFamily: string,
+  letterSpacingPx: number,
+  minFontPx: number
+): number {
+  if (typeof document === 'undefined' || lines.length === 0) return baseFontPx;
+  if (!measureCanvas) measureCanvas = document.createElement('canvas');
+  const ctx = measureCanvas.getContext('2d');
+  if (!ctx) return baseFontPx;
+
+  let fontPx = baseFontPx;
+  while (fontPx > minFontPx) {
+    ctx.font = `${fontWeight} ${fontPx}px ${fontFamily}`;
+    const widest = Math.max(
+      ...lines.map((line) => {
+        const upperLine = line.toUpperCase();
+        return ctx.measureText(upperLine).width + letterSpacingPx * Math.max(0, upperLine.length - 1);
+      })
+    );
+    if (widest <= maxWidthPx) break;
+    fontPx -= 0.5;
+  }
+  return fontPx;
+}
+
+// Whether `text` can be shown on one line at `fontPx` without exceeding `maxWidthPx`.
+// Used to force a 2-line wrap even for a short word-count name that's simply too long.
+function textFitsOnOneLine(
+  text: string,
+  maxWidthPx: number,
+  fontPx: number,
+  fontWeight: string | number,
+  fontFamily: string,
+  letterSpacingPx: number
+): boolean {
+  if (typeof document === 'undefined' || !text) return true;
+  if (!measureCanvas) measureCanvas = document.createElement('canvas');
+  const ctx = measureCanvas.getContext('2d');
+  if (!ctx) return true;
+
+  const upperText = text.toUpperCase();
+  ctx.font = `${fontWeight} ${fontPx}px ${fontFamily}`;
+  const width = ctx.measureText(upperText).width + letterSpacingPx * Math.max(0, upperText.length - 1);
+  return width <= maxWidthPx;
 }
 
 interface OrientedImage {
@@ -757,12 +807,24 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const EDITOR_CARD_WIDTH = 250
       const SCALE = PREVIEW_CARD_WIDTH / EDITOR_CARD_WIDTH
 
-      // Poltek-only: name wraps to a 2nd line once it's more than 2 words (see nama
-      // rendering below). Computed up-front so NIK's position can make room for it.
+      // Poltek-only: name wraps to a 2nd line once it's more than 2 words, OR (even at
+      // 2 words) once it's too long to fit on one line at the smallest readable size.
+      // Computed up-front so NIK's position can make room for it.
       const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
       const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
       const namaWordCount = (data.nama || '').trim().split(/\s+/).filter(Boolean).length
-      const namaShouldWrap = isPoltekUnit && namaWordCount > 2
+
+      const showBarcode = config?.show_barcode !== undefined ? !!config.show_barcode : true
+      const textWidth = showBarcode ? Math.round(185 * SCALE) : Math.round(216 * SCALE)   // 246px max when barcode present
+      const namaFontFamily = config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif"
+      const namaBaseFontPx = Math.round(Number(config?.nama_size || 13) * SCALE)
+      const namaText = data.nama || (isExport ? '' : 'IKA')
+      const namaMinFontPx = Math.max(9, Math.round(namaBaseFontPx * 0.5))
+
+      const namaFitsSingleLine = namaWordCount > 2
+        ? false // >2 words always wraps regardless of fit
+        : textFitsOnOneLine(namaText, textWidth, namaMinFontPx, config?.nama_weight || '700', namaFontFamily, 0.5)
+      const namaShouldWrap = isPoltekUnit && (namaWordCount > 2 || !namaFitsSingleLine)
       const NIK_WRAP_OFFSET_PCT = 2.5 // extra top offset (% of card height) so NIK clears the wrapped 2nd Nama line
 
       // Positions & Dimensions mapping with defaults (percentages scale naturally)
@@ -789,8 +851,6 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const showNik = config?.show_nik !== undefined ? !!config.show_nik : true
       const showNama = config?.show_nama !== undefined ? !!config.show_nama : true
       const showPhoto = config?.show_photo !== undefined ? !!config.show_photo : true
-
-      const showBarcode = config?.show_barcode !== undefined ? !!config.show_barcode : true
 
       // Barcode positioning & styling
       const posBarcode = config?.barcode_top !== undefined ? `${config.barcode_top}%` : '10%'
@@ -837,17 +897,17 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
 
       // Scaled element dimensions (editor pixels × SCALE)
       // Editor: text width=185 (when barcode shown) / 216, jabatan h=24, nik h=18, nama h=35
-      const textWidth = showBarcode ? Math.round(185 * SCALE) : Math.round(216 * SCALE)   // 246px max when barcode present
       const jabatanH = Math.round(24 * SCALE)      // 32
       const nikH = Math.round(18 * SCALE)           // 24
       const namaH = Math.round(35 * SCALE)          // 47
 
-      const namaFontFamily = config?.nama_font || config?.font_family || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif"
-      const namaBaseFontPx = Math.round(Number(config?.nama_size || 13) * SCALE)
-      const namaText = data.nama || (isExport ? '' : 'IKA')
-      // namaShouldWrap (>2 words) computed earlier alongside posNik's offset.
+      // namaShouldWrap (word count, or single-line overflow) computed earlier
+      // alongside posNik's offset; textWidth/namaFontFamily/namaBaseFontPx/namaText too.
+      const namaWrappedLines = (isPoltekUnit && namaShouldWrap) ? formatNameLines(namaText, 2).split('\n') : []
       const namaFontPx = (isPoltekUnit && !namaShouldWrap)
-        ? fitSingleLineFontSize(namaText, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, Math.max(9, Math.round(namaBaseFontPx * 0.5)))
+        ? fitSingleLineFontSize(namaText, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, namaMinFontPx)
+        : (isPoltekUnit && namaShouldWrap)
+        ? fitMultiLineFontSize(namaWrappedLines, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, namaMinFontPx)
         : namaBaseFontPx
 
       return (
@@ -1053,7 +1113,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                 }
               >
                 {isPoltekUnit
-                  ? (namaShouldWrap ? formatNameLines(namaText, 2) : namaText)
+                  ? (namaShouldWrap ? namaWrappedLines.join('\n') : namaText)
                   : (data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA')))}
               </span>
             </div>
@@ -1704,105 +1764,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               <span className="text-[10px] tracking-[2px] uppercase font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">ID Card Studio</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 pt-1">Kelola & Unduh Kartu</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">Ada 3 cara pakai kartu ini — unduh gambarnya, cetak lewat dialog printer biasa, atau cetak langsung ke printer kartu tanpa dialog.</p>
-          </div>
-
-          <div className="h-[1px] bg-slate-100" />
-
-          {/* Action Download Buttons */}
-          <div className="space-y-2.5">
-            <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[9px] font-bold">1</span>
-              Unduh Gambar Kartu
-              <span className="normal-case font-normal text-slate-400">(opsional, tidak mencetak apa pun)</span>
-            </label>
-            <button
-              onClick={() => handleDownload('front')}
-              disabled={downloading}
-              className="w-full flex items-center justify-between bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 text-slate-800 hover:text-indigo-900 px-4 py-3 rounded-xl transition duration-200 text-sm font-semibold cursor-pointer shadow-xs disabled:opacity-50 group"
-            >
-              <span className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-indigo-100/60 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
-                  <Download className="w-4 h-4" />
-                </div>
-                Unduh Bagian Depan
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">PNG</span>
-            </button>
-
-            <button
-              onClick={() => handleDownload('back')}
-              disabled={downloading}
-              className="w-full flex items-center justify-between bg-slate-50 hover:bg-purple-50/50 border border-slate-200/80 hover:border-purple-200 text-slate-800 hover:text-purple-900 px-4 py-3 rounded-xl transition duration-200 text-sm font-semibold cursor-pointer shadow-xs disabled:opacity-50 group"
-            >
-              <span className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-purple-100/60 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition">
-                  <Download className="w-4 h-4" />
-                </div>
-                Unduh Bagian Belakang
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">PNG</span>
-            </button>
-
-            <button
-              onClick={() => handleDownload('both')}
-              disabled={downloading}
-              className="w-full flex items-center justify-between bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold px-4 py-3.5 rounded-xl transition duration-200 text-sm cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-600/20"
-            >
-              <span className="flex items-center gap-2.5">
-                <Download className="w-4.5 h-4.5" />
-                Unduh Kedua Sisi (Lebar)
-              </span>
-              <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded">PNG</span>
-            </button>
-          </div>
-
-          <div className="h-[1px] bg-slate-100" />
-
-          {/* Browser print-dialog section */}
-          <div className="space-y-2.5">
-            <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
-                <span className="flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-600 text-[9px] font-bold">2A</span>
-                <MousePointerClick className="w-3.5 h-3.5 text-indigo-600" />
-                Cetak via Dialog Printer
-              </label>
-              <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Printer Apa Saja
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 leading-relaxed -mt-1">
-              Membuka jendela cetak bawaan browser — Anda pilih sendiri printer mana yang dipakai. Cocok untuk printer biasa (bukan khusus kartu ID).
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => triggerPrint('front')}
-                disabled={downloading}
-                className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
-                title="Buka dialog cetak browser untuk Sisi Depan"
-              >
-                <Printer className="w-3.5 h-3.5 text-indigo-600" />
-                Sisi Depan
-              </button>
-              <button
-                onClick={() => triggerPrint('back')}
-                disabled={downloading}
-                className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
-                title="Buka dialog cetak browser untuk Sisi Belakang"
-              >
-                <Printer className="w-3.5 h-3.5 text-purple-600" />
-                Sisi Belakang
-              </button>
-              <button
-                onClick={() => triggerPrint('both')}
-                disabled={downloading}
-                className="flex flex-col items-center justify-center gap-1 bg-slate-700 hover:bg-slate-800 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-xs transition disabled:opacity-50"
-                title="Buka dialog cetak browser untuk Kedua Sisi"
-              >
-                <Printer className="w-3.5 h-3.5 text-white" />
-                Kedua Sisi
-              </button>
-            </div>
+            <p className="text-xs text-slate-500 leading-relaxed">Cetak langsung ke printer kartu tanpa dialog.</p>
           </div>
 
           <div className="h-[1px] bg-slate-100" />
@@ -1810,7 +1772,6 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
           {/* QZ Tray Integration Panel */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-bold">2B</span>
               <Zap className="w-3.5 h-3.5 text-emerald-600" />
               Cetak Langsung ke Printer Kartu (Fargo)
             </label>
