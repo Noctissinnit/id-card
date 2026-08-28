@@ -825,6 +825,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
       const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
       const isYayasanUnit = unitIdentifier.includes('yayasan')
+      // PT ATMI SOLO-only: NIK shows as a bare number, no "NIK." prefix. Matched by
+      // exact unit name (not a substring like Poltek/Yayasan) since "atmi" alone would
+      // also match Poltek's own department text ("Politeknik ATMI Surakarta").
+      const isPtAtmiUnit = (customTemplate?.nama || '').trim().toLowerCase() === 'pt atmi solo'
       const nameWrapWordsPerLine = isPoltekUnit ? 2 : (isYayasanUnit ? 1 : null)
       const isSpecialWrapUnit = nameWrapWordsPerLine !== null
       const namaWordCount = (data.nama || '').trim().split(/\s+/).filter(Boolean).length
@@ -977,6 +981,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   fontWeight: config?.jabatan_weight || '900',
                   fontSize: `${Math.round(Number(config?.jabatan_size || 11) * SCALE)}px`,
                   color: jabatanColor,
+                  textTransform: 'capitalize',
                   letterSpacing: '0.5px',
                   lineHeight: '1.2',
                   textAlign: config?.jabatan_align || 'center',
@@ -1018,7 +1023,9 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                   textAlign: config?.nik_align || 'center'
                 }}
               >
-                {isPoltekUnit ? (data.nik || (isExport ? '' : '690/03/05')) : (data.nik ? `NIK. ${data.nik}` : (isExport ? '' : 'NIK. 690/03/05'))}
+                {(isPoltekUnit || isPtAtmiUnit)
+                  ? (data.nik || (isExport ? '' : '690/03/05'))
+                  : (data.nik ? `NIK. ${data.nik}` : (isExport ? '' : 'NIK. 690/03/05'))}
               </span>
             </div>
           )}

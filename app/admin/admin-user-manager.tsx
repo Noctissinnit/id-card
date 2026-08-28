@@ -406,14 +406,9 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
     const percentX = (clampedX / rect.width) * 100
     const percentY = (clampedY / rect.height) * 100
 
-    let finalLeft = percentX.toFixed(1)
-    if (activeDragElement !== 'photo' && activeDragElement !== 'barcode' && activeDragElement !== 'footer_logo' && Math.abs(percentX - 5) < 3.5) {
-      finalLeft = '5'
-    }
-
     setModalLayout(prev => ({
       ...prev,
-      [`${activeDragElement}_left`]: finalLeft,
+      [`${activeDragElement}_left`]: percentX.toFixed(1),
       [`${activeDragElement}_top`]: percentY.toFixed(1)
     }))
   }
@@ -1849,10 +1844,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: 'sans-serif',
+                            fontFamily: modalLayout.jabatan_font || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                             fontWeight: modalLayout.jabatan_weight || '900',
                             fontSize: `${modalLayout.jabatan_size || '11'}px`,
                             color: modalLayout.jabatan_color,
+                            textTransform: 'capitalize',
                             letterSpacing: '0.5px',
                             lineHeight: '1.2',
                             textAlign: modalLayout.jabatan_align || 'center',
@@ -1892,7 +1888,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: "'Lato', sans-serif",
+                            fontFamily: modalLayout.nik_font || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                             fontWeight: modalLayout.nik_weight || '400',
                             fontSize: `${modalLayout.nik_size || '10'}px`,
                             color: modalLayout.nik_color,
@@ -1957,7 +1953,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: "'Poppins', sans-serif",
+                            fontFamily: modalLayout.nama_font || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                             fontWeight: modalLayout.nama_weight || '700',
                             fontSize: `${modalLayout.nama_size || '13'}px`,
                             color: modalLayout.nama_color,
@@ -2748,6 +2744,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="">Default (Century Gothic)</option>
                             <option value="'Poppins', sans-serif">Poppins</option>
                             <option value="'Lato', sans-serif">Lato</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
                           </select>
                         </div>
                       </div>
@@ -2783,6 +2780,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="">Default (Century Gothic)</option>
                             <option value="'Poppins', sans-serif">Poppins</option>
                             <option value="'Lato', sans-serif">Lato</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
                           </select>
                         </div>
                       </div>
@@ -2818,6 +2816,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="">Default (Century Gothic)</option>
                             <option value="'Poppins', sans-serif">Poppins</option>
                             <option value="'Lato', sans-serif">Lato</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
                           </select>
                         </div>
                       </div>
@@ -2938,10 +2937,11 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: 'sans-serif',
+                            fontFamily: modalLayout.jabatan_font || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                             fontWeight: modalLayout.jabatan_weight || '900',
                             fontSize: `${modalLayout.jabatan_size || '11'}px`,
                             color: modalLayout.jabatan_color,
+                            textTransform: 'capitalize',
                             letterSpacing: '0.5px',
                             lineHeight: '1.2',
                             textAlign: modalLayout.jabatan_align || 'center',
@@ -2981,7 +2981,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: "'Lato', sans-serif",
+                            fontFamily: modalLayout.nik_font || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                             fontWeight: modalLayout.nik_weight || '400',
                             fontSize: `${modalLayout.nik_size || '10'}px`,
                             color: modalLayout.nik_color,
@@ -3045,7 +3045,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                       >
                         <span
                           style={{
-                            fontFamily: "'Poppins', sans-serif",
+                            fontFamily: modalLayout.nama_font || "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
                             fontWeight: modalLayout.nama_weight || '700',
                             fontSize: `${modalLayout.nama_size || '13'}px`,
                             color: modalLayout.nama_color,
@@ -3886,6 +3886,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="">Default (Century Gothic)</option>
                             <option value="'Poppins', sans-serif">Poppins</option>
                             <option value="'Lato', sans-serif">Lato</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
                           </select>
                         </div>
                       </div>
@@ -3921,6 +3922,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="">Default (Century Gothic)</option>
                             <option value="'Poppins', sans-serif">Poppins</option>
                             <option value="'Lato', sans-serif">Lato</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
                           </select>
                         </div>
                       </div>
@@ -3956,6 +3958,7 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
                             <option value="">Default (Century Gothic)</option>
                             <option value="'Poppins', sans-serif">Poppins</option>
                             <option value="'Lato', sans-serif">Lato</option>
+                            <option value="Arial, Helvetica, sans-serif">Arial</option>
                           </select>
                         </div>
                       </div>
