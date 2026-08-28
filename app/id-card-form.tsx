@@ -403,7 +403,7 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
 
             <div className="space-y-2">
               <label htmlFor="jabatan" className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">
-                Jabatan / Posisi
+                Departemen
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
