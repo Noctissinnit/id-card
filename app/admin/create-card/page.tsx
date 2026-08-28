@@ -2,11 +2,12 @@ import React from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getUserAction } from '../../auth-actions'
-import { getSession, clearSessionAction } from '../../actions'
+import { getSession } from '../../actions'
 import { getUnitsAction } from '../admin-actions'
 import IDCardForm from '../../id-card-form'
 import IDCardPreview from '../../id-card-preview'
 import SignOutButton from '../../../components/SignOutButton'
+import ClearSessionOnMount from '../../../components/ClearSessionOnMount'
 import { ArrowLeft, Building, ShieldAlert } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -40,16 +41,16 @@ export default async function AdminCreateCardPage({
   }
 
   // The session cookie is global (not scoped per-unit). If the admin previously
-  // started a card for a different unit, clear it so switching units here always
-  // starts from a clean form instead of showing a stale preview from another unit.
-  let session = await getSession()
-  if (session && session.departemen && session.departemen !== selectedUnit.nama) {
-    await clearSessionAction()
-    session = null
-  }
+  // started a card for a different unit, don't show that stale preview here — and
+  // ask the client to actually clear the cookie (cookie mutation isn't allowed
+  // during a Server Component's own render, only from a client-invoked action).
+  const rawSession = await getSession()
+  const sessionBelongsToOtherUnit = !!(rawSession && rawSession.departemen && rawSession.departemen !== selectedUnit.nama)
+  const session = sessionBelongsToOtherUnit ? null : rawSession
 
   return (
     <main className="min-h-screen w-full flex flex-col justify-between bg-slate-50 text-slate-900 relative overflow-hidden bg-grid-pattern py-10 px-4 md:px-8">
+      {sessionBelongsToOtherUnit && <ClearSessionOnMount />}
       {/* Background radial glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-200/20 rounded-full filter blur-[100px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-200/20 rounded-full filter blur-[100px] pointer-events-none" />

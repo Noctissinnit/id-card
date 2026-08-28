@@ -39,6 +39,16 @@ export function formatNameLines(name: string, maxWordsPerLine: number = 2): stri
   return lines.join('\n');
 }
 
+// Yayasan-only: first word alone on line 1, every remaining word (however many)
+// together on line 2 — unlike formatNameLines' fixed-size chunking, this never
+// produces a 3rd line, so nothing gets clipped off by the 2-line clamp.
+function formatNameFirstWordThenRest(name: string): string {
+  if (!name) return '';
+  const words = name.trim().split(/\s+/);
+  if (words.length <= 1) return name;
+  return `${words[0]}\n${words.slice(1).join(' ')}`;
+}
+
 let measureCanvas: HTMLCanvasElement | null = null;
 
 // Shrinks font size (down to minFontPx) until `text` fits within maxWidthPx on one line.
@@ -807,11 +817,16 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const EDITOR_CARD_WIDTH = 250
       const SCALE = PREVIEW_CARD_WIDTH / EDITOR_CARD_WIDTH
 
-      // Poltek-only: name wraps to a 2nd line once it's more than 2 words, OR (even at
-      // 2 words) once it's too long to fit on one line at the smallest readable size.
-      // Computed up-front so NIK's position can make room for it.
+      // Per-unit name wrap rule: Poltek wraps to a 2nd line once the name is more than
+      // 2 words; Yayasan wraps once it's more than 1 word (stricter — even a 2-word name
+      // wraps). Either also wraps early if the allowed word chunk is too long to fit on
+      // one line at the smallest readable size. Computed up-front so NIK's position can
+      // make room for it.
       const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
       const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
+      const isYayasanUnit = unitIdentifier.includes('yayasan')
+      const nameWrapWordsPerLine = isPoltekUnit ? 2 : (isYayasanUnit ? 1 : null)
+      const isSpecialWrapUnit = nameWrapWordsPerLine !== null
       const namaWordCount = (data.nama || '').trim().split(/\s+/).filter(Boolean).length
 
       const showBarcode = config?.show_barcode !== undefined ? !!config.show_barcode : true
@@ -821,10 +836,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const namaText = data.nama || (isExport ? '' : 'IKA')
       const namaMinFontPx = Math.max(9, Math.round(namaBaseFontPx * 0.5))
 
-      const namaFitsSingleLine = namaWordCount > 2
-        ? false // >2 words always wraps regardless of fit
+      const namaFitsSingleLine = !isSpecialWrapUnit || namaWordCount > (nameWrapWordsPerLine as number)
+        ? false // no rule for this unit, or already over the threshold — wraps regardless of fit
         : textFitsOnOneLine(namaText, textWidth, namaMinFontPx, config?.nama_weight || '700', namaFontFamily, 0.5)
-      const namaShouldWrap = isPoltekUnit && (namaWordCount > 2 || !namaFitsSingleLine)
+      const namaShouldWrap = isSpecialWrapUnit && (namaWordCount > (nameWrapWordsPerLine as number) || !namaFitsSingleLine)
       const NIK_WRAP_OFFSET_PCT = 2.5 // extra top offset (% of card height) so NIK clears the wrapped 2nd Nama line
 
       // Positions & Dimensions mapping with defaults (percentages scale naturally)
@@ -901,12 +916,14 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const nikH = Math.round(18 * SCALE)           // 24
       const namaH = Math.round(35 * SCALE)          // 47
 
-      // namaShouldWrap (word count, or single-line overflow) computed earlier
-      // alongside posNik's offset; textWidth/namaFontFamily/namaBaseFontPx/namaText too.
-      const namaWrappedLines = (isPoltekUnit && namaShouldWrap) ? formatNameLines(namaText, 2).split('\n') : []
-      const namaFontPx = (isPoltekUnit && !namaShouldWrap)
+      // namaShouldWrap (per-unit word-count threshold, or single-line overflow) computed
+      // earlier alongside posNik's offset; textWidth/namaFontFamily/namaBaseFontPx/namaText too.
+      const namaWrappedLines = (isSpecialWrapUnit && namaShouldWrap)
+        ? (isYayasanUnit ? formatNameFirstWordThenRest(namaText) : formatNameLines(namaText, nameWrapWordsPerLine as number)).split('\n')
+        : []
+      const namaFontPx = (isSpecialWrapUnit && !namaShouldWrap)
         ? fitSingleLineFontSize(namaText, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, namaMinFontPx)
-        : (isPoltekUnit && namaShouldWrap)
+        : (isSpecialWrapUnit && namaShouldWrap)
         ? fitMultiLineFontSize(namaWrappedLines, textWidth, namaBaseFontPx, config?.nama_weight || '700', namaFontFamily, 0.5, namaMinFontPx)
         : namaBaseFontPx
 
@@ -1061,7 +1078,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
             >
               <span
                 style={
-                  isPoltekUnit && !namaShouldWrap
+                  isSpecialWrapUnit && !namaShouldWrap
                     ? {
                         fontFamily: namaFontFamily,
                         fontWeight: config?.nama_weight || '700',
@@ -1076,7 +1093,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
                       }
-                    : isPoltekUnit
+                    : isSpecialWrapUnit
                     ? {
                         fontFamily: namaFontFamily,
                         fontWeight: config?.nama_weight || '700',
@@ -1112,7 +1129,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
                       }
                 }
               >
-                {isPoltekUnit
+                {isSpecialWrapUnit
                   ? (namaShouldWrap ? namaWrappedLines.join('\n') : namaText)
                   : (data.nama ? formatNameLines(data.nama) : (isExport ? '' : formatNameLines('IKA')))}
               </span>
