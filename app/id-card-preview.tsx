@@ -17,7 +17,8 @@ import {
   Layers,
   ArrowRightLeft,
   User,
-  Zap
+  Zap,
+  Printer
 } from 'lucide-react';
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
@@ -639,6 +640,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
     `);
 
     setDownloading(true);
+    // Let React finish mounting the loading overlay before html2canvas clones the
+    // document — otherwise that DOM mutation can land mid-clone and html2canvas
+    // throws "Unable to find element in cloned iframe" (matches handleDownload below).
+    await new Promise((r) => setTimeout(r, 100));
     try {
       const images: string[] = [];
 
@@ -704,10 +709,10 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       // Card has been sent to the print dialog — clear the session so the next
       // visit starts from a blank form instead of re-showing this same card.
       await handleReset();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Print error:', err);
       printWin.close();
-      alert('Gagal menyiapkan dokumen cetak.');
+      alert(`Gagal menyiapkan dokumen cetak: ${err?.message || err}`);
     } finally {
       setDownloading(false);
     }
@@ -1788,7 +1793,54 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               <span className="text-[10px] tracking-[2px] uppercase font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">ID Card Studio</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 pt-1">Kelola & Unduh Kartu</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">Cetak langsung ke printer kartu tanpa dialog.</p>
+            <p className="text-xs text-slate-500 leading-relaxed">Cetak langsung ke printer kartu tanpa dialog, atau gunakan dialog cetak browser untuk printer lain.</p>
+          </div>
+
+          <div className="h-[1px] bg-slate-100" />
+
+          {/* Browser print-dialog section */}
+          <div className="space-y-2.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+                <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                Cetak via Dialog Printer
+              </label>
+              <span className="text-[9px] bg-slate-100 border border-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Printer Apa Saja
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed -mt-1">
+              Membuka jendela cetak bawaan browser — Anda pilih sendiri printer mana yang dipakai. Cocok untuk printer biasa (bukan khusus kartu ID).
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => triggerPrint('front')}
+                disabled={downloading}
+                className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Buka dialog cetak browser untuk Sisi Depan"
+              >
+                <Printer className="w-3.5 h-3.5 text-indigo-600" />
+                Sisi Depan
+              </button>
+              <button
+                onClick={() => triggerPrint('back')}
+                disabled={downloading}
+                className="flex flex-col items-center justify-center gap-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 py-2.5 rounded-xl text-[10px] font-semibold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Buka dialog cetak browser untuk Sisi Belakang"
+              >
+                <Printer className="w-3.5 h-3.5 text-purple-600" />
+                Sisi Belakang
+              </button>
+              <button
+                onClick={() => triggerPrint('both')}
+                disabled={downloading}
+                className="flex flex-col items-center justify-center gap-1 bg-slate-700 hover:bg-slate-800 text-white py-2.5 rounded-xl text-[10px] font-bold cursor-pointer shadow-xs transition disabled:opacity-50"
+                title="Buka dialog cetak browser untuk Kedua Sisi"
+              >
+                <Printer className="w-3.5 h-3.5 text-white" />
+                Kedua Sisi
+              </button>
+            </div>
           </div>
 
           <div className="h-[1px] bg-slate-100" />
