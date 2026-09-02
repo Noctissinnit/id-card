@@ -904,6 +904,34 @@ export default function AdminUserManager({ users, units, stats, adminUsername }:
   return (
     <>
       <div className="min-h-screen w-full bg-slate-50 text-slate-900 flex relative overflow-hidden font-sans">
+      {/* Processing Indicator — shown while a server action or the follow-up data
+          refresh is in flight. Mirrors the app's own loading.tsx screen. */}
+      {(loading || isPending) && (
+        <div className="fixed inset-0 z-[80] bg-slate-50/90 backdrop-blur-sm flex flex-col items-center justify-center gap-6 overflow-hidden">
+          <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
+          <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-indigo-200/20 rounded-full filter blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-200/15 rounded-full filter blur-[120px] pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col items-center gap-5">
+            <img
+              src="/img/final%20logo%20clor.png"
+              alt="Logo Yayasan Karya Bakti Surakarta"
+              className="h-12 w-auto object-contain"
+            />
+
+            <div className="relative h-10 w-10 flex items-center justify-center">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-20" />
+              <div className="animate-spin rounded-full h-9 w-9 border-2 border-transparent border-t-indigo-600 border-r-indigo-600" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <p className="text-xs font-bold tracking-wider uppercase text-slate-700">Memproses Data</p>
+              <p className="text-[10px] text-slate-400 font-mono">Mohon tunggu sebentar...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Success Toast */}
       {success && (
         <div className="fixed top-6 right-6 z-[60] bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-right">

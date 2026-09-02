@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
-import { Scissors, X, Sparkles } from 'lucide-react';
+import { Scissors, X, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 import { removeBackground } from '@imgly/background-removal';
 // @ts-expect-error - onnxruntime-web types exist but can't be resolved via package.json "exports"
 import * as ort from 'onnxruntime-web';
@@ -106,9 +106,13 @@ const applyBackgroundColor = (base64Image: string, color: string): Promise<strin
     img.src = base64Image;
   });
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const ZOOM_STEP = 0.1;
+
 export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', defaultZoom = 1, onCropComplete, onCancel }: IDCardCropperProps) {
-  // Photo scale is fixed — the user can only reposition (drag) the photo, not zoom it.
-  const FIXED_ZOOM = defaultZoom;
+  // Zoom starts at the unit's configured default but can be adjusted freely from there.
+  const [zoom, setZoom] = useState(defaultZoom);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [removeBg, setRemoveBg] = useState(false);
@@ -270,14 +274,15 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
           <Cropper
             image={cropperImage}
             crop={crop}
-            zoom={FIXED_ZOOM}
-            minZoom={FIXED_ZOOM}
-            maxZoom={FIXED_ZOOM}
-            zoomWithScroll={false}
+            zoom={zoom}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
+            zoomWithScroll={true}
             aspect={1} // Square aspect ratio since we crop to circle
             cropShape="round" // Round mask to match ID Card circle perfectly
             showGrid={true}
             onCropChange={onCropChange}
+            onZoomChange={setZoom}
             onCropComplete={onCropCompleteHandler}
             classes={{
               containerClassName: 'rounded-2xl',
@@ -319,9 +324,42 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
           )}
         </div>
 
-        {/* Position hint — zoom is fixed, only repositioning (drag) is allowed */}
-        <p className="w-full py-4 px-1 text-xs text-slate-500 text-center">
-          Geser foto di dalam bingkai untuk mengatur posisinya. Ukuran foto sudah ditetapkan.
+        {/* Zoom controls */}
+        <div className="w-full flex items-center gap-3 pt-4 px-1">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(MIN_ZOOM, Number((z - ZOOM_STEP).toFixed(2))))}
+            disabled={loading || zoom <= MIN_ZOOM}
+            className="shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Perkecil zoom"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <input
+            type="range"
+            min={MIN_ZOOM}
+            max={MAX_ZOOM}
+            step={ZOOM_STEP}
+            value={zoom}
+            disabled={loading}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-40"
+          />
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(MAX_ZOOM, Number((z + ZOOM_STEP).toFixed(2))))}
+            disabled={loading || zoom >= MAX_ZOOM}
+            className="shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+            aria-label="Perbesar zoom"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <span className="shrink-0 text-[11px] font-mono font-semibold text-slate-500 w-9 text-right">{zoom.toFixed(1)}x</span>
+        </div>
+
+        {/* Position hint */}
+        <p className="w-full pt-2 pb-4 px-1 text-xs text-slate-500 text-center">
+          Geser foto di dalam bingkai untuk mengatur posisinya, dan gunakan tombol/slider di atas untuk memperbesar atau memperkecil.
         </p>
 
         {/* BG Removal Option */}

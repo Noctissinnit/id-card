@@ -122,14 +122,16 @@ export default function IDCardForm({ defaultUnit, customTemplate }: IDCardFormPr
   const [error, setError] = useState<string | null>(null);
 
   // Admins can tune the cropper's default zoom per unit (Edit Unit → "Zoom Default
-  // Crop Foto"). If a unit hasn't set one explicitly, fall back to a sensible guess:
-  // units without their own uploaded template (e.g. Yayasan Karya Bakti Surakarta) use
-  // the built-in circular-photo "karya-bakti" theme, whose default submitted photos are
-  // typically a wider standing shot, so the cropper starts pre-zoomed in to roughly
-  // frame face + shoulders instead of showing the whole body by default.
-  const usesDefaultCircleTheme = !customTemplate?.card_design;
+  // Crop Foto"). If a unit hasn't set one explicitly, fall back to a sensible per-unit
+  // guess by unit identity — NOT by whether a card_design happens to be uploaded, since
+  // both Yayasan and Poltek now have their own uploaded templates and would otherwise
+  // collapse onto the exact same fallback value. Yayasan's typical submitted photos are
+  // a wider standing shot, so its cropper starts pre-zoomed in to roughly frame face +
+  // shoulders instead of showing the whole body; other units default to no extra zoom.
+  const unitIdentifier = (customTemplate?.nama || '').toLowerCase();
+  const isYayasanUnit = unitIdentifier.includes('yayasan');
   const configuredCropZoom = Number(customTemplate?.layout_config?.photo_crop_zoom);
-  const cropperDefaultZoom = configuredCropZoom > 0 ? configuredCropZoom : (usesDefaultCircleTheme ? 2.4 : 1);
+  const cropperDefaultZoom = configuredCropZoom > 0 ? configuredCropZoom : (isYayasanUnit ? 2.4 : 1);
 
   // Fields state
   const [nama, setNama] = useState('');
