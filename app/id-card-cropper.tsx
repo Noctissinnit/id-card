@@ -114,6 +114,17 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
   // Zoom starts at the unit's configured default but can be adjusted freely from there.
   const [zoom, setZoom] = useState(defaultZoom);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
+  // Checked = lock to the unit's default zoom/position (manual controls disabled).
+  // Unchecked = free manual zoom/drag. Checking it snaps back to default immediately.
+  const [useDefaultCrop, setUseDefaultCrop] = useState(true);
+
+  const handleUseDefaultCropChange = (checked: boolean) => {
+    setUseDefaultCrop(checked);
+    if (checked) {
+      setZoom(defaultZoom);
+      setCrop({ x: 0, y: 0 });
+    }
+  };
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [removeBg, setRemoveBg] = useState(false);
   const [bgColor, setBgColor] = useState<string>(defaultBgColor);
@@ -221,6 +232,7 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
   }, [removeBg, imageSrc]);
 
   const onCropChange = (newCrop: { x: number; y: number }) => {
+    if (useDefaultCrop) return; // locked to default position while checked
     setCrop(newCrop);
   };
 
@@ -274,15 +286,15 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
           <Cropper
             image={cropperImage}
             crop={crop}
-            zoom={zoom}
+            zoom={useDefaultCrop ? defaultZoom : zoom}
             minZoom={MIN_ZOOM}
             maxZoom={MAX_ZOOM}
-            zoomWithScroll={true}
+            zoomWithScroll={!useDefaultCrop}
             aspect={1} // Square aspect ratio since we crop to circle
             cropShape="round" // Round mask to match ID Card circle perfectly
             showGrid={true}
             onCropChange={onCropChange}
-            onZoomChange={setZoom}
+            onZoomChange={useDefaultCrop ? undefined : setZoom}
             onCropComplete={onCropCompleteHandler}
             classes={{
               containerClassName: 'rounded-2xl',
@@ -324,12 +336,24 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
           )}
         </div>
 
-        {/* Zoom controls */}
-        <div className="w-full flex items-center gap-3 pt-4 px-1">
+        {/* Use-default-crop checkbox */}
+        <label className="w-full flex items-center gap-2.5 pt-4 px-1 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={useDefaultCrop}
+            disabled={loading}
+            onChange={(e) => handleUseDefaultCropChange(e.target.checked)}
+            className="w-4 h-4 rounded text-indigo-600 border-slate-350 focus:ring-indigo-500 cursor-pointer disabled:opacity-50"
+          />
+          <span>Gunakan Crop Default ({defaultZoom.toFixed(1)}x)</span>
+        </label>
+
+        {/* Zoom controls — disabled while locked to the default crop */}
+        <div className={`w-full flex items-center gap-3 pt-3 px-1 ${useDefaultCrop ? 'opacity-40 pointer-events-none' : ''}`}>
           <button
             type="button"
             onClick={() => setZoom((z) => Math.max(MIN_ZOOM, Number((z - ZOOM_STEP).toFixed(2))))}
-            disabled={loading || zoom <= MIN_ZOOM}
+            disabled={loading || useDefaultCrop || zoom <= MIN_ZOOM}
             className="shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             aria-label="Perkecil zoom"
           >
@@ -341,25 +365,27 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
             max={MAX_ZOOM}
             step={ZOOM_STEP}
             value={zoom}
-            disabled={loading}
+            disabled={loading || useDefaultCrop}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 disabled:opacity-40"
           />
           <button
             type="button"
             onClick={() => setZoom((z) => Math.min(MAX_ZOOM, Number((z + ZOOM_STEP).toFixed(2))))}
-            disabled={loading || zoom >= MAX_ZOOM}
+            disabled={loading || useDefaultCrop || zoom >= MAX_ZOOM}
             className="shrink-0 p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             aria-label="Perbesar zoom"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
-          <span className="shrink-0 text-[11px] font-mono font-semibold text-slate-500 w-9 text-right">{zoom.toFixed(1)}x</span>
+          <span className="shrink-0 text-[11px] font-mono font-semibold text-slate-500 w-9 text-right">{(useDefaultCrop ? defaultZoom : zoom).toFixed(1)}x</span>
         </div>
 
         {/* Position hint */}
         <p className="w-full pt-2 pb-4 px-1 text-xs text-slate-500 text-center">
-          Geser foto di dalam bingkai untuk mengatur posisinya, dan gunakan tombol/slider di atas untuk memperbesar atau memperkecil.
+          {useDefaultCrop
+            ? 'Memakai posisi & zoom default unit ini. Hilangkan centang di atas untuk mengatur posisi dan zoom secara manual.'
+            : 'Geser foto di dalam bingkai untuk mengatur posisinya, dan gunakan tombol/slider di atas untuk memperbesar atau memperkecil.'}
         </p>
 
         {/* BG Removal Option */}
