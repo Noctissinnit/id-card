@@ -18,7 +18,8 @@ import {
   ArrowRightLeft,
   User,
   Zap,
-  Printer
+  Printer,
+  Download
 } from 'lucide-react';
 import { IDCardSession, clearSessionAction } from './actions';
 import { useRouter } from 'next/navigation';
@@ -1793,7 +1794,57 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
               <span className="text-[10px] tracking-[2px] uppercase font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">ID Card Studio</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 pt-1">Kelola & Unduh Kartu</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">Cetak langsung ke printer kartu tanpa dialog, atau gunakan dialog cetak browser untuk printer lain.</p>
+            <p className="text-xs text-slate-500 leading-relaxed">Unduh langsung ke perangkat, cetak lewat dialog browser, atau cetak langsung ke printer kartu tanpa dialog.</p>
+          </div>
+
+          <div className="h-[1px] bg-slate-100" />
+
+          {/* Direct download section — saves a PNG straight to disk, no new tab/window */}
+          <div className="space-y-2.5">
+            <label className="text-[10px] font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+              <Download className="w-3.5 h-3.5 text-indigo-600" />
+              Unduh Gambar Kartu
+              <span className="normal-case font-normal text-slate-400">(langsung tersimpan, tanpa buka tab baru)</span>
+            </label>
+            <button
+              onClick={() => handleDownload('front')}
+              disabled={downloading}
+              className="w-full flex items-center justify-between bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 text-slate-800 hover:text-indigo-900 px-4 py-3 rounded-xl transition duration-200 text-sm font-semibold cursor-pointer shadow-xs disabled:opacity-50 group"
+            >
+              <span className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-indigo-100/60 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
+                  <Download className="w-4 h-4" />
+                </div>
+                Unduh Bagian Depan
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">PNG</span>
+            </button>
+
+            <button
+              onClick={() => handleDownload('back')}
+              disabled={downloading}
+              className="w-full flex items-center justify-between bg-slate-50 hover:bg-purple-50/50 border border-slate-200/80 hover:border-purple-200 text-slate-800 hover:text-purple-900 px-4 py-3 rounded-xl transition duration-200 text-sm font-semibold cursor-pointer shadow-xs disabled:opacity-50 group"
+            >
+              <span className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-purple-100/60 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition">
+                  <Download className="w-4 h-4" />
+                </div>
+                Unduh Bagian Belakang
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">PNG</span>
+            </button>
+
+            <button
+              onClick={() => handleDownload('both')}
+              disabled={downloading}
+              className="w-full flex items-center justify-between bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold px-4 py-3.5 rounded-xl transition duration-200 text-sm cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-600/20"
+            >
+              <span className="flex items-center gap-2.5">
+                <Download className="w-4.5 h-4.5" />
+                Unduh Kedua Sisi (Lebar)
+              </span>
+              <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded">PNG</span>
+            </button>
           </div>
 
           <div className="h-[1px] bg-slate-100" />
