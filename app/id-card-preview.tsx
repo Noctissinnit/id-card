@@ -823,10 +823,12 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       const EDITOR_CARD_WIDTH = 250
       const SCALE = PREVIEW_CARD_WIDTH / EDITOR_CARD_WIDTH
 
-      // Per-unit name wrap rule: Poltek wraps to a 2nd line once the name is more than
-      // 2 words; Yayasan wraps once it's more than 1 word (stricter — even a 2-word name
-      // wraps). Either also wraps early if the allowed word chunk is too long to fit on
-      // one line at the smallest readable size. Computed up-front so NIK's position can
+      // Per-unit name wrap rule: Poltek and PT ATMI Solo wrap to a 2nd line once the
+      // name is more than 2 words; Yayasan wraps once it's more than 1 word (stricter —
+      // even a 2-word name wraps). Any of these also wraps early if the allowed word
+      // chunk is too long to fit on one line at the smallest readable size, and is hard
+      // capped at 2 visual lines (see WebkitLineClamp below) so a long name shrinks
+      // instead of spilling onto a 3rd line. Computed up-front so NIK's position can
       // make room for it.
       const unitIdentifier = `${customTemplate?.nama || ''} ${data.departemen || ''}`.toLowerCase()
       const isPoltekUnit = unitIdentifier.includes('poltek') || unitIdentifier.includes('politeknik')
@@ -835,7 +837,7 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
       // exact unit name (not a substring like Poltek/Yayasan) since "atmi" alone would
       // also match Poltek's own department text ("Politeknik ATMI Surakarta").
       const isPtAtmiUnit = (customTemplate?.nama || '').trim().toLowerCase() === 'pt atmi solo'
-      const nameWrapWordsPerLine = isPoltekUnit ? 2 : (isYayasanUnit ? 1 : null)
+      const nameWrapWordsPerLine = (isPoltekUnit || isPtAtmiUnit) ? 2 : (isYayasanUnit ? 1 : null)
       const isSpecialWrapUnit = nameWrapWordsPerLine !== null
       const namaWordCount = (data.nama || '').trim().split(/\s+/).filter(Boolean).length
 
@@ -850,13 +852,16 @@ export default function IDCardPreview({ data, customTemplate }: IDCardPreviewPro
         ? false // no rule for this unit, or already over the threshold — wraps regardless of fit
         : textFitsOnOneLine(namaText, textWidth, namaMinFontPx, config?.nama_weight || '700', namaFontFamily, 0.5)
       const namaShouldWrap = isSpecialWrapUnit && (namaWordCount > (nameWrapWordsPerLine as number) || !namaFitsSingleLine)
+      // Only Poltek's layout has NIK sitting close enough to the wrapping Nama line to
+      // need this nudge — PT ATMI Solo and Yayasan position NIK well away from Nama, so
+      // shifting it there would just open an unwanted gap instead of avoiding overlap.
       const NIK_WRAP_OFFSET_PCT = 2.5 // extra top offset (% of card height) so NIK clears the wrapped 2nd Nama line
 
       // Positions & Dimensions mapping with defaults (percentages scale naturally)
       const posJabatan = config?.jabatan_top !== undefined ? `${config.jabatan_top}%` : '26.5%'
       const posJabatanLeft = config?.jabatan_left !== undefined ? `${config.jabatan_left}%` : '5%'
       const nikTopBase = config?.nik_top !== undefined ? Number(config.nik_top) : 35
-      const posNik = `${nikTopBase + (namaShouldWrap ? NIK_WRAP_OFFSET_PCT : 0)}%`
+      const posNik = `${nikTopBase + (namaShouldWrap && isPoltekUnit ? NIK_WRAP_OFFSET_PCT : 0)}%`
       const posNikLeft = (config?.nik_left !== undefined && String(config.nik_left) !== '0') ? `${config.nik_left}%` : '5%'
       const posNama = config?.nama_top !== undefined ? `${config.nama_top}%` : '86%'
       const posNamaLeft = config?.nama_left !== undefined ? `${config.nama_left}%` : '5%'
