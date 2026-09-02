@@ -283,28 +283,34 @@ export default function IDCardCropper({ imageSrc, defaultBgColor = '#1b365d', de
 
         {/* Cropper Box */}
         <div className="relative w-full h-80 bg-zinc-950 rounded-2xl overflow-hidden shadow-inner border border-slate-200">
-          <Cropper
-            image={cropperImage}
-            crop={crop}
-            zoom={useDefaultCrop ? defaultZoom : zoom}
-            minZoom={MIN_ZOOM}
-            maxZoom={MAX_ZOOM}
-            zoomWithScroll={!useDefaultCrop}
-            aspect={1} // Square aspect ratio since we crop to circle
-            cropShape="round" // Round mask to match ID Card circle perfectly
-            showGrid={true}
-            onCropChange={onCropChange}
-            onZoomChange={useDefaultCrop ? undefined : setZoom}
-            onCropComplete={onCropCompleteHandler}
-            classes={{
-              containerClassName: 'rounded-2xl',
-            }}
-            style={{
-              containerStyle: {
-                backgroundColor: bgColor === 'transparent' ? '#09090b' : bgColor
-              }
-            }}
-          />
+          {/* react-easy-crop binds its drag/touch listeners on its own internal
+              container div, which takes no `disabled` prop — blocking the resulting
+              onCropChange callback alone still lets the gesture start. Cut it off at
+              the DOM level instead so dragging is impossible while locked. */}
+          <div className={useDefaultCrop ? 'pointer-events-none h-full w-full' : 'h-full w-full'}>
+            <Cropper
+              image={cropperImage}
+              crop={crop}
+              zoom={useDefaultCrop ? defaultZoom : zoom}
+              minZoom={MIN_ZOOM}
+              maxZoom={MAX_ZOOM}
+              zoomWithScroll={!useDefaultCrop}
+              aspect={1} // Square aspect ratio since we crop to circle
+              cropShape="round" // Round mask to match ID Card circle perfectly
+              showGrid={true}
+              onCropChange={onCropChange}
+              onZoomChange={useDefaultCrop ? undefined : setZoom}
+              onCropComplete={onCropCompleteHandler}
+              classes={{
+                containerClassName: 'rounded-2xl',
+              }}
+              style={{
+                containerStyle: {
+                  backgroundColor: bgColor === 'transparent' ? '#09090b' : bgColor
+                }
+              }}
+            />
+          </div>
 
           {/* AI Processing Overlay */}
           {aiProgress !== null && (
